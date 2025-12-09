@@ -1,13 +1,3 @@
-# Vercel 部署配置 (仅前端)
-# ========================
-#
-# 使用 Vercel 部署前端：
-# 1. 安装 Vercel CLI: npm i -g vercel
-# 2. 在 frontend 目录运行: vercel
-# 3. 按提示完成部署
-#
-# 注意：后端需要单独部署到 Railway/Render/Fly.io
-
 {
     "buildCommand": "npm run build",
     "outputDirectory": "dist",

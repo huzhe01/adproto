@@ -1,0 +1,25 @@
+# GrowEngine 后端依赖
+# ===================
+
+# Web 框架
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# 数据验证
+pydantic>=2.5.0
+
+# 数据处理 (用于 simulator.py)
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 进度条 (可选)
+tqdm>=4.66.0
+
+# HTTP 客户端 (可选，用于外部 API 调用)
+httpx>=0.25.0
+
+# 环境变量管理
+python-dotenv>=1.0.0
+
+# 生产部署 (可选)
+gunicorn>=21.0.0

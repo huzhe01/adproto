@@ -1,0 +1,28 @@
+# Railway 部署配置 (后端)
+# ========================
+#
+# 使用 Railway 部署后端：
+# 1. 访问 https://railway.app
+# 2. 连接 GitHub 仓库
+# 3. 选择 backend 目录作为根目录
+# 4. Railway 会自动检测并部署
+#
+# 或者使用 Railway CLI:
+# 1. 安装: npm i -g @railway/cli
+# 2. 登录: railway login
+# 3. 初始化: railway init
+# 4. 部署: railway up
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "uvicorn api:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+ENVIRONMENT = "production"
+DEBUG = "false"

@@ -1,0 +1,22 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+
+/* .card:hover {
+    transform: translateY(-2px);
+} */
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+#chart-alpha, #chart-cost, #chart-wins {
+    border-radius: 4px;
+}

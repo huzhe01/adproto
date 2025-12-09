@@ -1,0 +1,61 @@
+# GrowEngine 全栈服务 Docker Compose 配置
+# ==========================================
+#
+# 使用方法:
+#   启动全部服务: docker-compose up -d
+#   停止服务:     docker-compose down
+#   查看日志:     docker-compose logs -f
+#   重新构建:     docker-compose up -d --build
+#
+# 服务说明:
+#   - frontend: React 前端 (端口 3000)
+#   - backend:  FastAPI 后端 (端口 8000)
+#
+
+version: '3.8'
+
+services:
+  # ==================== 前端服务 ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: growengine-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - growengine-network
+
+  # ==================== 后端服务 ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: growengine-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - growengine-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  growengine-network:
+    driver: bridge
+
+volumes:
+  backend-data:

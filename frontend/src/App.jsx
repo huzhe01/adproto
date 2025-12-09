@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard,
   BarChart3,
@@ -30,7 +30,17 @@ import {
   Eye,
   RefreshCw,
   Wallet,
-  Wrench
+  Wrench,
+  X,
+  GripVertical,
+  MessageCircle,
+  Send,
+  Bot,
+  Sparkles,
+  ListFilter,
+  Columns3,
+  Loader2,
+  WifiOff
 } from 'lucide-react';
 import {
   AreaChart,
@@ -41,6 +51,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+
+// API 服务
+import * as api from './services/api';
+
+// Components
+import CampaignSimulationModal from './components/CampaignSimulationModal';
 
 // Mock Data for Charts (Keep existing)
 const performanceData = [
@@ -154,6 +170,34 @@ const initialCampaigns = [
   }
 ];
 
+// 可选列配置
+const AVAILABLE_COLUMNS = {
+  '属性设置': [
+    { key: 'id', label: '项目ID', default: true },
+    { key: 'name', label: '项目名称', default: true },
+    { key: 'status', label: '项目状态', default: true },
+    { key: 'budget', label: '项目预算', default: true },
+    { key: 'bidType', label: '出价方式', default: false },
+  ],
+  '基础指标': [
+    { key: 'bid', label: '出价(元)', default: true },
+    { key: 'spend', label: '消耗(元)', default: true },
+    { key: 'impressions', label: '展示数', default: true },
+    { key: 'clicks', label: '点击数', default: true },
+    { key: 'ctr', label: '点击率', default: true },
+  ],
+  '转化数据': [
+    { key: 'cvr', label: '转化率', default: true },
+    { key: 'cpa', label: 'CPA', default: true },
+    { key: 'roi', label: 'ROI', default: true },
+    { key: 'estConversions', label: '预估转化数(计费时间)', default: false },
+    { key: 'estConversionCost', label: '预估转化成本(计费时间)', default: false },
+    { key: 'estConversionValue', label: '预估转化价值(计费时间)', default: false },
+  ],
+};
+
+const DEFAULT_COLUMNS = ['name', 'status', 'bid', 'spend', 'impressions', 'clicks', 'ctr', 'cvr', 'cpa', 'roi'];
+
 const TAB_TITLES = {
   dashboard: '投放概览',
   campaigns: '广告计划',
@@ -235,15 +279,239 @@ export default function AdPlatform() {
   const currentTitle = TAB_TITLES[activeTab] || 'GrowEngine 控制台';
   const isDocsView = activeTab === 'docs';
 
-  // Toggle Campaign Status
-  const toggleStatus = (id) => {
-    setCampaigns(campaigns.map(c => {
-      if (c.id === id) {
-        const newStatus = c.status === 'active' || c.status === 'learning' ? 'paused' : 'active';
-        return { ...c, status: newStatus };
+  // API 相关状态
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiConnected, setApiConnected] = useState(false);
+  const [realtimeMetrics, setRealtimeMetrics] = useState(null);
+  const [trendData, setTrendData] = useState(performanceData);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // 模拟器状态
+  const [showSimModal, setShowSimModal] = useState(false);
+  const [simCampaign, setSimCampaign] = useState(null);
+
+  // 打开模拟器
+  const openSimulation = (campaign) => {
+    setSimCampaign(campaign);
+    setShowSimModal(true);
+  };
+
+  // 新建计划表单状态
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [newBudget, setNewBudget] = useState(5000);
+  const [newBid, setNewBid] = useState(65);
+  const [newTargetType, setNewTargetType] = useState('商品购买');
+
+  // 从后端加载数据
+  const loadData = useCallback(async () => {
+    try {
+      // 并行请求所有数据
+      const [campaignsData, metricsData, trendDataRes] = await Promise.all([
+        api.getCampaigns(),
+        api.getRealtimeMetrics(),
+        api.getMetricsTrend(24)
+      ]);
+
+      // 转换 campaigns 数据格式 (snake_case -> camelCase)
+      const formattedCampaigns = campaignsData.map(c => ({
+        ...c,
+        learningStage: c.learning_stage,
+        bidType: c.bid_type,
+      }));
+
+      setCampaigns(formattedCampaigns);
+      setRealtimeMetrics(metricsData);
+      setTrendData(trendDataRes);
+      setApiConnected(true);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Failed to load data from API:', error);
+      setApiConnected(false);
+      // 降级使用本地 mock 数据
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 初始加载及 URL 参数处理
+  useEffect(() => {
+    loadData();
+
+    // 检查 URL 参数是否要求打开模拟器
+    const params = new URLSearchParams(window.location.search);
+    const simId = params.get('simulate');
+    if (simId) {
+      // 延迟一点以确保数据加载或直接使用 ID 创建临时对象
+      // 由于 simulateBidding 只需要 ID，我们可以先创建一个只有 ID 和 Name 的临时对象
+      setSimCampaign({ id: parseInt(simId), name: `Campaign #${simId}` });
+      setShowSimModal(true);
+    }
+
+    // 每 30 秒自动刷新
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  // 创建新计划 (API 集成)
+  const createCampaign = async () => {
+    try {
+      const newCampaignData = {
+        name: newCampaignName || `新建计划_${new Date().toLocaleDateString('zh-CN')}`,
+        budget: newBudget,
+        bid: newBid,
+        target_type: newTargetType,
+        bid_type: 'oCPM'
+      };
+
+      if (apiConnected) {
+        const created = await api.createCampaign(newCampaignData);
+        const formattedCampaign = {
+          ...created,
+          learningStage: created.learning_stage,
+          bidType: created.bid_type,
+          estConversions: Math.floor(newBudget / newBid * 0.8),
+          estConversionCost: newBid,
+          estConversionValue: Math.floor(newBudget / newBid * 0.8 * 150),
+        };
+        setCampaigns([formattedCampaign, ...campaigns]);
+      } else {
+        // 离线模式 - 本地创建
+        const newCampaign = {
+          id: Date.now(),
+          name: newCampaignData.name,
+          status: 'learning',
+          budget: newBudget,
+          bid: newBid,
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          cvr: 0,
+          cpa: 0,
+          roi: 0,
+          learningStage: 'learning',
+          bidType: 'oCPM',
+          estConversions: Math.floor(newBudget / newBid * 0.8),
+          estConversionCost: newBid,
+          estConversionValue: Math.floor(newBudget / newBid * 0.8 * 150),
+        };
+        setCampaigns([newCampaign, ...campaigns]);
       }
-      return c;
-    }));
+
+      setShowCreateModal(false);
+      // 重置表单
+      setNewCampaignName('');
+      setNewBudget(5000);
+      setNewBid(65);
+      setNewTargetType('商品购买');
+    } catch (error) {
+      console.error('Failed to create campaign:', error);
+    }
+  };
+
+  // 自定义列状态
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState(DEFAULT_COLUMNS);
+  const [activeCategory, setActiveCategory] = useState('属性设置');
+
+  // 切换列选中状态
+  const toggleColumn = (key) => {
+    if (selectedColumns.includes(key)) {
+      setSelectedColumns(selectedColumns.filter(k => k !== key));
+    } else {
+      setSelectedColumns([...selectedColumns, key]);
+    }
+  };
+
+  // 移除已选列
+  const removeColumn = (key) => {
+    setSelectedColumns(selectedColumns.filter(k => k !== key));
+  };
+
+  // 清空所有列
+  const clearColumns = () => {
+    setSelectedColumns([]);
+  };
+
+  // AI 助手状态
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [aiMessages, setAiMessages] = useState([
+    { role: 'assistant', content: '你好！我是智投星，你的全能AI助理。随时随地，解决你的投放问题。今天有什么可以帮您的？' }
+  ]);
+  const [aiInput, setAiInput] = useState('');
+
+  // 发送消息给AI (API 集成)
+  const sendToAI = async () => {
+    if (!aiInput.trim()) return;
+
+    const userMsg = { role: 'user', content: aiInput };
+    setAiMessages([...aiMessages, userMsg]);
+    const currentInput = aiInput;
+    setAiInput('');
+
+    try {
+      if (apiConnected) {
+        // 调用后端 AI API
+        const response = await api.chatWithAI(currentInput);
+        const aiReply = {
+          role: 'assistant',
+          content: response.response
+        };
+        setAiMessages(prev => [...prev, aiReply]);
+      } else {
+        // 离线模式 - 本地模拟回复
+        setTimeout(() => {
+          const responses = [
+            '根据您的投放数据分析，目前计划「新品推广_冬季大衣_V1」表现最佳，ROI达到3.8。建议继续加大预算。',
+            '系统检测到您有3条计划正在冷启动中，预计24小时内完成学习期。建议保持当前出价不变。',
+            '近7天整体消耗趋势上升12%，GMV增长24%。投放效率持续优化中。',
+            '检测到素材「Video_003」点击率持续下降，建议更换创意素材或调整投放人群。',
+          ];
+          const aiReply = {
+            role: 'assistant',
+            content: responses[Math.floor(Math.random() * responses.length)]
+          };
+          setAiMessages(prev => [...prev, aiReply]);
+        }, 800);
+      }
+    } catch (error) {
+      console.error('AI chat failed:', error);
+      setAiMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '抱歉，AI 服务暂时不可用，请稍后再试。'
+      }]);
+    }
+  };
+
+  // 快捷问题
+  const quickQuestions = [
+    '广告审核未通过的具体原因是什么',
+    '广告审核未通过如何修改',
+    '广告为什么不消耗',
+    '如何提升计划ROI'
+  ];
+
+  // Toggle Campaign Status (API 集成)
+  const toggleStatus = async (id) => {
+    try {
+      if (apiConnected) {
+        const updated = await api.toggleCampaignStatus(id);
+        setCampaigns(campaigns.map(c =>
+          c.id === id ? { ...c, status: updated.status } : c
+        ));
+      } else {
+        // 离线模式
+        setCampaigns(campaigns.map(c => {
+          if (c.id === id) {
+            const newStatus = c.status === 'active' || c.status === 'learning' ? 'paused' : 'active';
+            return { ...c, status: newStatus };
+          }
+          return c;
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to toggle status:', error);
+    }
   };
 
   // Start Editing Bid
@@ -331,9 +599,20 @@ export default function AdPlatform() {
             <h1 className="text-xl font-semibold text-slate-800">
               {currentTitle}
             </h1>
-            <span className="ml-4 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              系统运行正常
-            </span>
+            {apiConnected ? (
+              <span className="ml-4 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                API 已连接
+              </span>
+            ) : (
+              <span className="ml-4 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 flex items-center">
+                <WifiOff className="w-3 h-3 mr-1" />
+                离线模式
+              </span>
+            )}
+            {isLoading && (
+              <Loader2 className="ml-3 w-4 h-4 text-blue-500 animate-spin" />
+            )}
           </div>
 
           <div className="flex items-center space-x-4">
@@ -454,12 +733,23 @@ export default function AdPlatform() {
             </div>
           ) : (
             <>
-              {/* 1. Metrics (Unchanged) */}
+              {/* 1. Metrics (API 集成) */}
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-slate-800 flex items-center">
                     实时数据
-                    <span className="ml-2 text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">更新于 1 分钟前</span>
+                    <span className="ml-2 text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                      {lastUpdated ? `更新于 ${lastUpdated.toLocaleTimeString('zh-CN')}` : '加载中...'}
+                    </span>
+                    {apiConnected && (
+                      <button
+                        onClick={loadData}
+                        className="ml-2 p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="刷新数据"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
                   </h2>
                   <div className="flex space-x-2">
                     <select className="text-sm border-slate-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
@@ -473,7 +763,7 @@ export default function AdPlatform() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                   <MetricCard
                     title="总消耗 (Cost)"
-                    value="¥ 21,450"
+                    value={realtimeMetrics ? `¥ ${realtimeMetrics.total_spend.toLocaleString()}` : '¥ --'}
                     change="+12.5%"
                     trend="up"
                     icon={DollarSign}
@@ -481,7 +771,7 @@ export default function AdPlatform() {
                   />
                   <MetricCard
                     title="GMV (成交额)"
-                    value="¥ 98,320"
+                    value={realtimeMetrics ? `¥ ${realtimeMetrics.total_gmv.toLocaleString()}` : '¥ --'}
                     change="+24.2%"
                     trend="up"
                     icon={ShoppingBag}
@@ -489,7 +779,7 @@ export default function AdPlatform() {
                   />
                   <MetricCard
                     title="ROI (投入产出比)"
-                    value="4.58"
+                    value={realtimeMetrics ? realtimeMetrics.roi.toFixed(2) : '--'}
                     change="-1.2%"
                     trend="down"
                     icon={TrendingUp}
@@ -497,7 +787,7 @@ export default function AdPlatform() {
                   />
                   <MetricCard
                     title="点击率 (CTR)"
-                    value="3.2%"
+                    value={realtimeMetrics ? `${realtimeMetrics.ctr}%` : '--%'}
                     change="+0.4%"
                     trend="up"
                     icon={MousePointerClick}
@@ -518,7 +808,7 @@ export default function AdPlatform() {
                   </div>
                   <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorGmv" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
@@ -599,6 +889,12 @@ export default function AdPlatform() {
                     <button className="flex items-center px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-50 rounded hover:bg-slate-100 border border-slate-200">
                       <Download className="w-3 h-3 mr-2" /> 导出
                     </button>
+                    <button
+                      onClick={() => setShowColumnModal(true)}
+                      className="flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 border border-blue-200"
+                    >
+                      <Columns3 className="w-3 h-3 mr-2" /> 自定义列
+                    </button>
                   </div>
                 </div>
 
@@ -607,14 +903,19 @@ export default function AdPlatform() {
                     <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-medium">
                       <tr>
                         <th className="px-4 py-3 w-16 text-center">开关</th>
-                        <th className="px-4 py-3 min-w-[200px]">计划名称 / ID</th>
-                        <th className="px-4 py-3 text-center">系统状态</th>
-                        <th className="px-4 py-3">出价 (CNY)</th>
-                        <th className="px-4 py-3">消耗</th>
-                        <th className="px-4 py-3">展现 / 点击</th>
-                        <th className="px-4 py-3">CTR / CVR</th>
-                        <th className="px-4 py-3">CPA</th>
-                        <th className="px-4 py-3">ROI</th>
+                        {selectedColumns.includes('name') && <th className="px-4 py-3 min-w-[200px]">计划名称 / ID</th>}
+                        {selectedColumns.includes('status') && <th className="px-4 py-3 text-center">系统状态</th>}
+                        {selectedColumns.includes('bid') && <th className="px-4 py-3">出价 (CNY)</th>}
+                        {selectedColumns.includes('spend') && <th className="px-4 py-3">消耗</th>}
+                        {selectedColumns.includes('impressions') && <th className="px-4 py-3">展现</th>}
+                        {selectedColumns.includes('clicks') && <th className="px-4 py-3">点击</th>}
+                        {selectedColumns.includes('ctr') && <th className="px-4 py-3">CTR</th>}
+                        {selectedColumns.includes('cvr') && <th className="px-4 py-3">CVR</th>}
+                        {selectedColumns.includes('cpa') && <th className="px-4 py-3">CPA</th>}
+                        {selectedColumns.includes('roi') && <th className="px-4 py-3">ROI</th>}
+                        {selectedColumns.includes('estConversions') && <th className="px-4 py-3">预估转化数</th>}
+                        {selectedColumns.includes('estConversionCost') && <th className="px-4 py-3">预估转化成本</th>}
+                        {selectedColumns.includes('estConversionValue') && <th className="px-4 py-3">预估转化价值</th>}
                         <th className="px-4 py-3 text-right">操作</th>
                       </tr>
                     </thead>
@@ -635,68 +936,116 @@ export default function AdPlatform() {
                             </button>
                           </td>
 
+
                           {/* Name & ID */}
-                          <td className="px-4 py-4">
-                            <div className="font-medium text-slate-900 truncate max-w-[200px]" title={item.name}>
-                              {item.name}
-                            </div>
-                            <div className="text-[10px] text-slate-400 mt-1 font-mono flex items-center">
-                              ID: {item.id}
-                              <span className="ml-2 px-1 border border-slate-200 rounded bg-white text-slate-500">{item.bidType}</span>
-                            </div>
-                          </td>
+                          {selectedColumns.includes('name') && (
+                            <td className="px-4 py-4">
+                              <button
+                                onClick={() => openSimulation(item)}
+                                className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[200px] text-left block"
+                                title="点击查看竞价模拟"
+                              >
+                                {item.name}
+                              </button>
+                              <div className="text-[10px] text-slate-400 mt-1 font-mono flex items-center">
+                                ID: {item.id}
+                                <span className="ml-2 px-1 border border-slate-200 rounded bg-white text-slate-500">{item.bidType}</span>
+                              </div>
+                            </td>
+                          )}
 
                           {/* Learning Status */}
-                          <td className="px-4 py-4 text-center">
-                            {getStageBadge(item.learningStage)}
-                            {item.status === 'paused' && <div className="text-[10px] text-slate-400 mt-1">已暂停</div>}
-                          </td>
+                          {selectedColumns.includes('status') && (
+                            <td className="px-4 py-4 text-center">
+                              {getStageBadge(item.learningStage)}
+                              {item.status === 'paused' && <div className="text-[10px] text-slate-400 mt-1">已暂停</div>}
+                            </td>
+                          )}
 
                           {/* Bid (Editable) */}
-                          <td className="px-4 py-4">
-                            {editingId === item.id ? (
-                              <div className="flex items-center space-x-1">
-                                <input
-                                  type="number"
-                                  value={tempBid}
-                                  onChange={(e) => setTempBid(e.target.value)}
-                                  className="w-16 px-1 py-1 text-xs border border-blue-400 rounded focus:outline-none"
-                                  autoFocus
-                                />
-                                <button onClick={() => saveBid(item.id)} className="text-green-600 hover:text-green-800"><CheckCircle2 className="w-4 h-4" /></button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center group cursor-pointer" onClick={() => startEditBid(item)}>
-                                <span className="font-medium">¥ {item.bid.toFixed(2)}</span>
-                                <Edit2 className="w-3 h-3 text-slate-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            )}
-                          </td>
+                          {selectedColumns.includes('bid') && (
+                            <td className="px-4 py-4">
+                              {editingId === item.id ? (
+                                <div className="flex items-center space-x-1">
+                                  <input
+                                    type="number"
+                                    value={tempBid}
+                                    onChange={(e) => setTempBid(e.target.value)}
+                                    className="w-16 px-1 py-1 text-xs border border-blue-400 rounded focus:outline-none"
+                                    autoFocus
+                                  />
+                                  <button onClick={() => saveBid(item.id)} className="text-green-600 hover:text-green-800"><CheckCircle2 className="w-4 h-4" /></button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center group cursor-pointer" onClick={() => startEditBid(item)}>
+                                  <span className="font-medium">¥ {item.bid.toFixed(2)}</span>
+                                  <Edit2 className="w-3 h-3 text-slate-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              )}
+                            </td>
+                          )}
 
                           {/* Spend */}
-                          <td className="px-4 py-4 font-mono text-slate-700">¥ {item.spend.toLocaleString()}</td>
+                          {selectedColumns.includes('spend') && (
+                            <td className="px-4 py-4 font-mono text-slate-700">¥ {item.spend.toLocaleString()}</td>
+                          )}
 
-                          {/* Imp/Click */}
-                          <td className="px-4 py-4 text-xs">
-                            <div className="text-slate-700 font-medium">{item.impressions.toLocaleString()} <span className="text-slate-400 font-normal">展</span></div>
-                            <div className="text-slate-500 mt-1">{item.clicks.toLocaleString()} <span className="text-slate-400 font-normal">点</span></div>
-                          </td>
+                          {/* Impressions */}
+                          {selectedColumns.includes('impressions') && (
+                            <td className="px-4 py-4 text-slate-700">{item.impressions.toLocaleString()}</td>
+                          )}
 
-                          {/* CTR/CVR */}
-                          <td className="px-4 py-4 text-xs">
-                            <div className={`${item.ctr > 2 ? 'text-green-600' : 'text-slate-600'} font-medium`}>{item.ctr}% <span className="text-slate-400 font-normal">CTR</span></div>
-                            <div className="text-slate-500 mt-1">{item.cvr}% <span className="text-slate-400 font-normal">CVR</span></div>
-                          </td>
+                          {/* Clicks */}
+                          {selectedColumns.includes('clicks') && (
+                            <td className="px-4 py-4 text-slate-700">{item.clicks.toLocaleString()}</td>
+                          )}
+
+                          {/* CTR */}
+                          {selectedColumns.includes('ctr') && (
+                            <td className="px-4 py-4">
+                              <span className={`${item.ctr > 2 ? 'text-green-600' : 'text-slate-600'} font-medium`}>{item.ctr}%</span>
+                            </td>
+                          )}
+
+                          {/* CVR */}
+                          {selectedColumns.includes('cvr') && (
+                            <td className="px-4 py-4 text-slate-600">{item.cvr}%</td>
+                          )}
 
                           {/* CPA */}
-                          <td className="px-4 py-4 font-medium text-slate-700">¥ {item.cpa}</td>
+                          {selectedColumns.includes('cpa') && (
+                            <td className="px-4 py-4 font-medium text-slate-700">¥ {item.cpa}</td>
+                          )}
 
                           {/* ROI */}
-                          <td className="px-4 py-4">
-                            <span className={`font-bold ${item.roi >= 3 ? 'text-emerald-600' : item.roi < 1 ? 'text-red-500' : 'text-amber-600'}`}>
-                              {item.roi}
-                            </span>
-                          </td>
+                          {selectedColumns.includes('roi') && (
+                            <td className="px-4 py-4">
+                              <span className={`font-bold ${item.roi >= 3 ? 'text-emerald-600' : item.roi < 1 ? 'text-red-500' : 'text-amber-600'}`}>
+                                {item.roi}
+                              </span>
+                            </td>
+                          )}
+
+                          {/* 预估转化数 */}
+                          {selectedColumns.includes('estConversions') && (
+                            <td className="px-4 py-4 text-slate-700">
+                              {item.estConversions || Math.floor(item.budget / item.bid * 0.7)}
+                            </td>
+                          )}
+
+                          {/* 预估转化成本 */}
+                          {selectedColumns.includes('estConversionCost') && (
+                            <td className="px-4 py-4 text-slate-700">
+                              ¥ {(item.estConversionCost || item.bid).toFixed(2)}
+                            </td>
+                          )}
+
+                          {/* 预估转化价值 */}
+                          {selectedColumns.includes('estConversionValue') && (
+                            <td className="px-4 py-4 text-emerald-600 font-medium">
+                              ¥ {(item.estConversionValue || Math.floor(item.budget / item.bid * 0.7 * 150)).toLocaleString()}
+                            </td>
+                          )}
 
                           {/* Actions */}
                           <td className="px-4 py-4 text-right">
@@ -753,6 +1102,24 @@ export default function AdPlatform() {
                 {/* Form Side */}
                 <div className="col-span-8 space-y-8">
 
+                  {/* 计划基本信息 */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="font-semibold text-slate-900 flex items-center mb-4">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs mr-2">0</span>
+                      计划基本信息
+                    </h3>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">计划名称 <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="请输入计划名称，如：双12大促_女装推广"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        value={newCampaignName}
+                        onChange={(e) => setNewCampaignName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   {/* Step 1: Material */}
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="font-semibold text-slate-900 flex items-center mb-4">
@@ -777,7 +1144,11 @@ export default function AdPlatform() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">投放目标</label>
                         <div className="grid grid-cols-3 gap-3">
                           {['商品购买', '表单提交', '应用下载'].map(opt => (
-                            <button key={opt} className={`py-2 px-3 text-sm rounded-lg border ${opt === '商品购买' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <button
+                              key={opt}
+                              onClick={() => setNewTargetType(opt)}
+                              className={`py-2 px-3 text-sm rounded-lg border transition-colors ${opt === newTargetType ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:border-slate-300'}`}
+                            >
                               {opt}
                             </button>
                           ))}
@@ -805,16 +1176,54 @@ export default function AdPlatform() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">日预算 (¥)</label>
-                        <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" defaultValue={5000} />
+                        <input
+                          type="number"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          value={newBudget}
+                          onChange={(e) => setNewBudget(Number(e.target.value))}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">目标转化出价 (oCPM)</label>
-                        <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" defaultValue={65} />
+                        <input
+                          type="number"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          value={newBid}
+                          onChange={(e) => setNewBid(Number(e.target.value))}
+                        />
+                        {/* 建议出价范围 */}
+                        <div className="mt-2 flex items-center text-xs text-slate-500">
+                          <span>建议出价范围：</span>
+                          <span className="text-blue-600 font-semibold ml-1">¥50 - ¥80</span>
+                          <span className="ml-2 text-slate-400">(基于行业历史数据)</span>
+                        </div>
+                        {/* 出价竞争力指示器 */}
+                        <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                          <div className="flex justify-between items-center text-xs mb-2">
+                            <span className="text-slate-600">出价竞争力</span>
+                            <span className={`font-medium ${newBid >= 70 ? 'text-emerald-600' : newBid >= 50 ? 'text-amber-600' : 'text-red-500'
+                              }`}>
+                              {newBid >= 70 ? '较高' : newBid >= 50 ? '中等' : '较低'}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${newBid >= 70 ? 'bg-emerald-500' : newBid >= 50 ? 'bg-amber-500' : 'bg-red-400'
+                                }`}
+                              style={{ width: `${Math.min(100, (newBid / 100) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                            <span>¥0</span>
+                            <span>¥50</span>
+                            <span>¥100+</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-start gap-2 p-3 bg-emerald-50 rounded-lg text-xs text-emerald-800">
-                      <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-600" />
-                      <p>系统预测：当前出价具有较强竞争力，预计覆盖 85% 目标流量。建议开启“最大转化量”策略以平滑冷启动。</p>
+                    <div className="mt-4 flex items-start gap-2 p-3 bg-emerald-50 rounded-lg text-xs text-emerald-800">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-600 flex-shrink-0" />
+                      <p>系统预测：当前出价具有{newBid >= 70 ? '较强' : newBid >= 50 ? '一般' : '较弱'}竞争力，预计覆盖 {newBid >= 70 ? '85%' : newBid >= 50 ? '60%' : '30%'} 目标流量。建议开启"最大转化量"策略以平滑冷启动。</p>
                     </div>
                   </div>
 
@@ -864,10 +1273,7 @@ export default function AdPlatform() {
                 存草稿
               </button>
               <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  alert("计划已提交审核！");
-                }}
+                onClick={createCampaign}
                 className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md shadow-blue-200 transition-colors flex items-center"
               >
                 <Zap className="w-4 h-4 mr-2" />
@@ -878,6 +1284,269 @@ export default function AdPlatform() {
           </div>
         </div>
       )}
+
+      {/* 自定义列弹窗 */}
+      {showColumnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-slate-800">自定义列</h2>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-hidden flex">
+              {/* 左侧分类导航 */}
+              <div className="w-48 bg-slate-50 border-r border-slate-100 p-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">属性设置</div>
+                {Object.keys(AVAILABLE_COLUMNS).map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg mb-1 transition-colors ${activeCategory === category
+                      ? 'bg-blue-100 text-blue-700 font-medium'
+                      : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              {/* 中间可选列表 */}
+              <div className="flex-1 p-4 overflow-y-auto border-r border-slate-100">
+                <div className="mb-3">
+                  <div className="text-sm font-semibold text-slate-700 mb-3">{activeCategory}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {AVAILABLE_COLUMNS[activeCategory]?.map(col => (
+                      <label
+                        key={col.key}
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedColumns.includes(col.key)
+                          ? 'border-blue-300 bg-blue-50'
+                          : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(col.key)}
+                          onChange={() => toggleColumn(col.key)}
+                          className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-slate-700">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 右侧已选列表 */}
+              <div className="w-72 p-4 bg-slate-50/50">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-slate-700">已添加 ({selectedColumns.length})</span>
+                  <button
+                    onClick={clearColumns}
+                    className="text-xs text-red-500 hover:text-red-600"
+                  >
+                    清空
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {selectedColumns.map((key, index) => {
+                    const col = Object.values(AVAILABLE_COLUMNS).flat().find(c => c.key === key);
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 group"
+                      >
+                        <div className="flex items-center">
+                          <GripVertical className="w-4 h-4 text-slate-300 mr-2" />
+                          <span className="text-sm text-slate-700">{col?.label || key}</span>
+                        </div>
+                        <button
+                          onClick={() => removeColumn(key)}
+                          className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
+              <button
+                onClick={() => setSelectedColumns(DEFAULT_COLUMNS)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                恢复默认
+              </button>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI 助手悬浮按钮 */}
+      <div className="fixed bottom-6 right-6 z-40">
+        {!showAIAssistant && (
+          <button
+            onClick={() => setShowAIAssistant(true)}
+            className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg shadow-blue-300/50 flex items-center justify-center hover:scale-110 transition-transform group"
+          >
+            <Bot className="w-7 h-7 text-white" />
+            <span className="absolute -top-2 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center animate-pulse">3</span>
+          </button>
+        )}
+      </div>
+
+      {/* AI 助手对话面板 */}
+      {showAIAssistant && (
+        <div className="fixed top-0 right-0 bottom-0 z-50 w-[400px] bg-white shadow-2xl border-l border-slate-200 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mr-2">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-semibold">智投星</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button className="text-white/80 hover:text-white text-xs px-2 py-1 hover:bg-white/10 rounded">
+                反馈
+              </button>
+              <button
+                onClick={() => setShowAIAssistant(false)}
+                className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* 欢迎区 */}
+          <div className="px-4 py-4 bg-gradient-to-b from-blue-50 to-white text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800 mb-1">我是智投星 你的全能AI助理</h3>
+            <p className="text-xs text-slate-500">随时随地，解决你的投放问题</p>
+          </div>
+
+          {/* 快捷功能卡片 */}
+          <div className="px-4 py-3 border-b border-slate-100">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                <div className="flex items-center text-blue-600 mb-1">
+                  <BarChart3 className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">AI日报</span>
+                </div>
+                <p className="text-[10px] text-slate-500">昨日数据日报，快速掌握跑量表现</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors">
+                <div className="flex items-center text-purple-600 mb-1">
+                  <BrainCircuit className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">广告诊断</span>
+                </div>
+                <p className="text-[10px] text-slate-500">帮助客户判断投放效果、定位投放问题</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 对话区域 */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {aiMessages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[85%] px-3 py-2 rounded-lg text-sm ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-700'
+                    }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 推荐问题 */}
+          <div className="px-4 py-2 border-t border-slate-100">
+            <div className="flex items-center mb-2">
+              <span className="text-xs text-slate-500">你还可以这样问我</span>
+              <span className="ml-2 text-[10px] text-orange-500 bg-orange-50 px-2 py-0.5 rounded">小智推荐</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {quickQuestions.slice(0, 2).map((q, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setAiInput(q);
+                    sendToAI();
+                  }}
+                  className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full hover:bg-blue-100 transition-colors truncate max-w-full"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 输入框 */}
+          <div className="p-3 border-t border-slate-200 bg-slate-50">
+            <div className="flex items-center bg-white border border-slate-200 rounded-full px-4 py-2">
+              <input
+                type="text"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendToAI()}
+                placeholder="请描述你的问题"
+                className="flex-1 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400"
+              />
+              <button
+                onClick={sendToAI}
+                className="ml-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
+              >
+                <Send className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign Simulation Modal - Moved to root level with high z-index */}
+      {showSimModal && simCampaign && (
+        <div className="fixed inset-0 z-[9999]">
+          <CampaignSimulationModal
+            campaign={simCampaign}
+            onClose={() => setShowSimModal(false)}
+          />
+        </div>
+      )}
+
+      {/* DEBUG PANEL - Temporarily added for troubleshooting */}
+      <div className="fixed bottom-4 right-20 bg-black/80 text-white p-4 rounded-lg text-xs font-mono z-[10000] pointer-events-none opacity-80 backdrop-blur-sm border border-white/20">
+        <div className="text-yellow-400 font-bold mb-1">DEBUG MODE</div>
+        <div>SimModal: <span className={showSimModal ? "text-green-400" : "text-red-400"}>{String(showSimModal)}</span></div>
+        <div>Campaign: {simCampaign ? `[${simCampaign.id}]` : 'null'}</div>
+        <div>URL: {window.location.search || 'none'}</div>
+        <div className="text-gray-400 mt-1 text-[10px]">Refresh page to apply URL params</div>
+      </div>
     </div>
   );
 }

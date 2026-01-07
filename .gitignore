@@ -49,3 +49,4 @@ frontend/.eslintcache
 .agent/
 tmp/
 web_visualization/data/simulation_data.js
+CLAUDE.md

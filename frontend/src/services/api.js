@@ -150,6 +150,80 @@ export async function chatWithAI(message) {
     });
 }
 
+/**
+ * Agent 对话 (流式响应)
+ * @param {Array} messages - 对话历史 [{role: 'user', content: '...'}, ...]
+ * @param {Function} onMessage - 收到消息时的回调 (data) => void
+ * @param {Function} onToolCall - 工具调用时的回调 (tool, args) => void
+ * @param {Function} onToolResult - 工具结果时的回调 (tool, result) => void
+ * @param {Function} onError - 错误时的回调 (error) => void
+ * @param {Function} onDone - 完成时的回调 () => void
+ */
+export async function chatWithAgent(messages, { onMessage, onToolCall, onToolResult, onError, onDone }) {
+    const url = `${API_BASE_URL}/api/ai/agent`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages,
+                enable_tools: true,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+
+                        switch (data.type) {
+                            case 'content':
+                                onMessage?.(data.content);
+                                break;
+                            case 'tool_call':
+                                onToolCall?.(data.tool, data.arguments);
+                                break;
+                            case 'tool_result':
+                                onToolResult?.(data.tool, data.result);
+                                break;
+                            case 'error':
+                                onError?.(data.content);
+                                break;
+                            case 'done':
+                                onDone?.();
+                                break;
+                        }
+                    } catch (e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Agent chat failed:', error);
+        onError?.(error.message);
+    }
+}
+
 // ==================== 健康检查 ====================
 
 /**
@@ -172,5 +246,6 @@ export default {
     simulateBidding,
     getDiagnosis,
     chatWithAI,
+    chatWithAgent,
     healthCheck,
 };

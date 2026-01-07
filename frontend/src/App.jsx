@@ -54,6 +54,7 @@ import {
 
 // API 服务
 import * as api from './services/api';
+import { chatWithAgent } from './services/api';
 
 // Components
 import CampaignSimulationModal from './components/CampaignSimulationModal';
@@ -211,64 +212,160 @@ const TAB_TITLES = {
   docs: '文档站',
 };
 
-const docCurrentFocus = {
-  phase: 'Q4 自主投放基建冲刺',
-  description: '聚焦 GrowEngine 投放驾驶舱，让核心指标、诊断以及计划管理链路可视化，为后续竞价后端与智能投放能力奠定基线。',
-  checkpoints: [
-    { label: '版本', value: 'Dashboard v1.0' },
-    { label: '可视化覆盖', value: '实时指标 / GMV&消耗 / 智能诊断' },
-    { label: '状态', value: '进行中' },
-  ],
-  codeAreas: [
-    'src/App.jsx · Metrics & Charts',
-    'src/App.jsx · Campaign Table',
-    'src/App.jsx · Creation Modal',
-  ],
+// 文档内容 - 中英文
+const DOC_CONTENT = {
+  zh: {
+    currentFocus: {
+      phase: 'Q4 自主投放基建冲刺',
+      description: '聚焦 GrowEngine 投放驾驶舱，让核心指标、诊断以及计划管理链路可视化，为后续竞价后端与智能投放能力奠定基线。',
+      checkpoints: [
+        { label: '版本', value: 'Dashboard v1.0' },
+        { label: '可视化覆盖', value: '实时指标 / GMV&消耗 / 智能诊断' },
+        { label: '状态', value: '进行中' },
+      ],
+      codeAreas: [
+        'src/App.jsx · Metrics & Charts',
+        'src/App.jsx · Campaign Table',
+        'src/App.jsx · Creation Modal',
+      ],
+    },
+    completedMilestones: [
+      {
+        title: '投放驾驶舱 1.0',
+        description: '实现实时指标卡片、GMV/消耗对比曲线与智能诊断提醒，提供端到端监视体验。',
+        wins: ['MetricCard 指标组件', 'Recharts 曲线可视化', 'DiagnosticCard 智能诊断'],
+        impact: '验证 UI 设计体系与基础交互。',
+      },
+      {
+        title: '计划管理迭代',
+        description: '补齐批量在投计划表格，可在单元内直接调价、查看学习状态、快速暂停/启用。',
+        wins: ['出价内联编辑', '学习阶段徽章', '计划搜索与导出操作区'],
+        impact: '满足运营团队的日常策略调优需求。',
+      },
+      {
+        title: '投放创建工作流',
+        description: '完成创意上传、人群定向与出价预算三段式表单，并在侧边提供素材预览与效果预估。',
+        wins: ['分步表单', '移动端素材预览', '系统出价建议提示'],
+        impact: '为后续自动建模和智能策略注入入口。',
+      },
+    ],
+    upcomingRoadmap: [
+      {
+        title: '构建竞价后端',
+        summary: '设计可插拔的竞价核心（流量拉取、约束控制、出价落盘）并暴露 API 供前台调用。',
+        deliverables: ['Traffic Adapter + Auction Core', '预算/频控守卫', '性能压测基线'],
+      },
+      {
+        title: '模型精排与打分',
+        summary: '接入特征工程 + 精排模型服务，统一候选请求、特征拼装与推理接口，输出可解释分数。',
+        deliverables: ['特征治理清单', '在线推理服务', '模型监控面板'],
+      },
+      {
+        title: '竞价仿真模拟器',
+        summary: '构建离线/准实时仿真框架，在上线前复刻真实流量、还原竞价位置与收益曲线。',
+        deliverables: ['流量回放样本库', '策略对比报告', '可视化面板'],
+      },
+      {
+        title: 'Agentic 智能投放助手',
+        summary: '打造多代理自动化投放助手，涵盖策略生成、素材调配以及投放执行闭环。',
+        deliverables: ['多代理工作流编排', '异常告警+自愈', '与驾驶舱联动的操作面板'],
+      },
+    ],
+    labels: {
+      currentSprint: '当前冲刺',
+      codeReach: '代码触达',
+      codeReachDesc: '文档站直接取材于以下模块',
+      note: '备注',
+      noteContent: '持续沉淀 PRD 级说明，方便团队对齐研究与工程节奏。',
+      completedFeatures: '已交付能力梳理',
+      completedFeaturesDesc: '总结目前 GrowEngine 控制台可直接展示/操作的功能模块。',
+      basedOn: '依据：src/App.jsx',
+      completed: '已完成',
+      roadmap: '下一步工作计划',
+      roadmapDesc: '聚焦竞价底座、模型精排、仿真与 Agent 工具链。',
+      nextIterations: '未来 3 个迭代',
+      planning: '规划中',
+    },
+  },
+  en: {
+    currentFocus: {
+      phase: 'Q4 Self-Service Ads Infrastructure Sprint',
+      description: 'Focus on GrowEngine dashboard to visualize core metrics, diagnostics, and campaign management, laying the foundation for bidding backend and intelligent delivery capabilities.',
+      checkpoints: [
+        { label: 'Version', value: 'Dashboard v1.0' },
+        { label: 'Coverage', value: 'Real-time Metrics / GMV&Spend / Smart Diagnosis' },
+        { label: 'Status', value: 'In Progress' },
+      ],
+      codeAreas: [
+        'src/App.jsx · Metrics & Charts',
+        'src/App.jsx · Campaign Table',
+        'src/App.jsx · Creation Modal',
+      ],
+    },
+    completedMilestones: [
+      {
+        title: 'Dashboard 1.0',
+        description: 'Implemented real-time metric cards, GMV/spend comparison charts, and smart diagnostic alerts for end-to-end monitoring.',
+        wins: ['MetricCard Component', 'Recharts Visualization', 'DiagnosticCard Smart Alerts'],
+        impact: 'Validated UI design system and basic interactions.',
+      },
+      {
+        title: 'Campaign Management',
+        description: 'Built batch campaign table with inline bid editing, learning stage badges, and quick pause/enable controls.',
+        wins: ['Inline Bid Editing', 'Learning Stage Badges', 'Search & Export Actions'],
+        impact: 'Meets daily optimization needs of operations team.',
+      },
+      {
+        title: 'Campaign Creation Workflow',
+        description: 'Completed 3-step form for creative upload, audience targeting, and bidding/budget with side preview and effect estimation.',
+        wins: ['Step-by-step Form', 'Mobile Preview', 'System Bid Suggestions'],
+        impact: 'Entry point for future auto-modeling and smart strategies.',
+      },
+    ],
+    upcomingRoadmap: [
+      {
+        title: 'Bidding Backend',
+        summary: 'Design pluggable bidding core (traffic fetching, constraint control, bid logging) and expose APIs for frontend.',
+        deliverables: ['Traffic Adapter + Auction Core', 'Budget/Frequency Guard', 'Performance Baseline'],
+      },
+      {
+        title: 'Model Ranking & Scoring',
+        summary: 'Integrate feature engineering + ranking model service, unify candidate requests, feature assembly and inference interface.',
+        deliverables: ['Feature Governance List', 'Online Inference Service', 'Model Monitoring Panel'],
+      },
+      {
+        title: 'Bidding Simulator',
+        summary: 'Build offline/near-realtime simulation framework to replicate real traffic and restore bidding positions and ROI curves.',
+        deliverables: ['Traffic Replay Samples', 'Strategy Comparison Reports', 'Visualization Panel'],
+      },
+      {
+        title: 'Agentic Smart Delivery Assistant',
+        summary: 'Build multi-agent automated delivery assistant covering strategy generation, creative allocation, and execution loop.',
+        deliverables: ['Multi-agent Workflow', 'Anomaly Alert + Self-healing', 'Dashboard Integration'],
+      },
+    ],
+    labels: {
+      currentSprint: 'Current Sprint',
+      codeReach: 'Code Coverage',
+      codeReachDesc: 'Documentation sourced from these modules',
+      note: 'Note',
+      noteContent: 'Continuously documenting PRD-level specs for team alignment on research and engineering.',
+      completedFeatures: 'Completed Features',
+      completedFeaturesDesc: 'Summary of features currently available in GrowEngine console.',
+      basedOn: 'Based on: src/App.jsx',
+      completed: 'Completed',
+      roadmap: 'Roadmap',
+      roadmapDesc: 'Focus on bidding infrastructure, model ranking, simulation, and Agent toolchain.',
+      nextIterations: 'Next 3 Iterations',
+      planning: 'Planning',
+    },
+  },
 };
 
-const completedMilestones = [
-  {
-    title: '投放驾驶舱 1.0',
-    description: '实现实时指标卡片、GMV/消耗对比曲线与智能诊断提醒，提供端到端监视体验。',
-    wins: ['MetricCard 指标组件', 'Recharts 曲线可视化', 'DiagnosticCard 智能诊断'],
-    impact: '验证 UI 设计体系与基础交互。',
-  },
-  {
-    title: '计划管理迭代',
-    description: '补齐批量在投计划表格，可在单元内直接调价、查看学习状态、快速暂停/启用。',
-    wins: ['出价内联编辑', '学习阶段徽章', '计划搜索与导出操作区'],
-    impact: '满足运营团队的日常策略调优需求。',
-  },
-  {
-    title: '投放创建工作流',
-    description: '完成创意上传、人群定向与出价预算三段式表单，并在侧边提供素材预览与效果预估。',
-    wins: ['分步表单', '移动端素材预览', '系统出价建议提示'],
-    impact: '为后续自动建模和智能策略注入入口。',
-  },
-];
-
-const upcomingRoadmap = [
-  {
-    title: '构建竞价后端',
-    summary: '设计可插拔的竞价核心（流量拉取、约束控制、出价落盘）并暴露 API 供前台调用。',
-    deliverables: ['Traffic Adapter + Auction Core', '预算/频控守卫', '性能压测基线'],
-  },
-  {
-    title: '模型精排与打分',
-    summary: '接入特征工程 + 精排模型服务，统一候选请求、特征拼装与推理接口，输出可解释分数。',
-    deliverables: ['特征治理清单', '在线推理服务', '模型监控面板'],
-  },
-  {
-    title: '竞价仿真模拟器',
-    summary: '构建离线/准实时仿真框架，在上线前复刻真实流量、还原竞价位置与收益曲线。',
-    deliverables: ['流量回放样本库', '策略对比报告', '可视化面板'],
-  },
-  {
-    title: 'Agentic 机器人与自动投放工具',
-    summary: '打造多代理自动化投放助手，涵盖策略生成、素材调配以及投放执行闭环。',
-    deliverables: ['多代理工作流编排', '异常告警+自愈', '与驾驶舱联动的操作面板'],
-  },
-];
+// 保持向后兼容的变量
+const docCurrentFocus = DOC_CONTENT.zh.currentFocus;
+const completedMilestones = DOC_CONTENT.zh.completedMilestones;
+const upcomingRoadmap = DOC_CONTENT.zh.upcomingRoadmap;
 
 export default function AdPlatform() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -276,8 +373,12 @@ export default function AdPlatform() {
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [editingId, setEditingId] = useState(null); // Track which row is being edited
   const [tempBid, setTempBid] = useState(0);
+  const [docLang, setDocLang] = useState('zh'); // 文档语言: 'zh' | 'en'
   const currentTitle = TAB_TITLES[activeTab] || 'GrowEngine 控制台';
   const isDocsView = activeTab === 'docs';
+
+  // 获取当前语言的文档内容
+  const docContent = DOC_CONTENT[docLang];
 
   // API 相关状态
   const [isLoading, setIsLoading] = useState(true);
@@ -440,47 +541,176 @@ export default function AdPlatform() {
   ]);
   const [aiInput, setAiInput] = useState('');
 
+  // Agent 模式状态
+  const [isAgentMode, setIsAgentMode] = useState(true); // 默认开启 Agent 模式
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingCampaign, setPendingCampaign] = useState(null); // 待确认的计划预览
+  const [streamingContent, setStreamingContent] = useState(''); // 流式内容缓冲
+
   // 发送消息给AI (API 集成)
   const sendToAI = async () => {
-    if (!aiInput.trim()) return;
+    if (!aiInput.trim() || isStreaming) return;
 
     const userMsg = { role: 'user', content: aiInput };
-    setAiMessages([...aiMessages, userMsg]);
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
     const currentInput = aiInput;
     setAiInput('');
 
-    try {
-      if (apiConnected) {
-        // 调用后端 AI API
-        const response = await api.chatWithAI(currentInput);
-        const aiReply = {
-          role: 'assistant',
-          content: response.response
-        };
-        setAiMessages(prev => [...prev, aiReply]);
-      } else {
-        // 离线模式 - 本地模拟回复
-        setTimeout(() => {
-          const responses = [
-            '根据您的投放数据分析，目前计划「新品推广_冬季大衣_V1」表现最佳，ROI达到3.8。建议继续加大预算。',
-            '系统检测到您有3条计划正在冷启动中，预计24小时内完成学习期。建议保持当前出价不变。',
-            '近7天整体消耗趋势上升12%，GMV增长24%。投放效率持续优化中。',
-            '检测到素材「Video_003」点击率持续下降，建议更换创意素材或调整投放人群。',
-          ];
-          const aiReply = {
-            role: 'assistant',
-            content: responses[Math.floor(Math.random() * responses.length)]
-          };
+    // Agent 模式 - 使用流式响应
+    if (isAgentMode && apiConnected) {
+      setIsStreaming(true);
+      setStreamingContent('');
+
+      // 添加一个空的 assistant 消息用于流式填充
+      const assistantMsg = { role: 'assistant', content: '', isStreaming: true };
+      setAiMessages(prev => [...prev, assistantMsg]);
+
+      // 构建发送给 Agent 的消息格式
+      const agentMessages = newMessages
+        .filter(m => m.role === 'user' || (m.role === 'assistant' && !m.isStreaming))
+        .map(m => ({ role: m.role, content: m.content }));
+
+      let accumulatedContent = '';
+
+      await chatWithAgent(agentMessages, {
+        onMessage: (content) => {
+          accumulatedContent += content;
+          setAiMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (updated[lastIdx]?.isStreaming) {
+              updated[lastIdx] = { ...updated[lastIdx], content: accumulatedContent };
+            }
+            return updated;
+          });
+        },
+        onToolCall: (tool, args) => {
+          console.log('Tool call:', tool, args);
+          // 可以在这里显示工具调用状态
+        },
+        onToolResult: (tool, result) => {
+          console.log('Tool result:', tool, result);
+          // 检查是否是计划预览
+          if (result?.type === 'campaign_preview' && result?.data) {
+            setPendingCampaign(result.data);
+          }
+        },
+        onError: (error) => {
+          setAiMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (updated[lastIdx]?.isStreaming) {
+              updated[lastIdx] = {
+                role: 'assistant',
+                content: `抱歉，发生错误: ${error}`,
+                isStreaming: false
+              };
+            }
+            return updated;
+          });
+          setIsStreaming(false);
+        },
+        onDone: () => {
+          setAiMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (updated[lastIdx]?.isStreaming) {
+              updated[lastIdx] = { ...updated[lastIdx], isStreaming: false };
+            }
+            return updated;
+          });
+          setIsStreaming(false);
+        }
+      });
+    } else {
+      // 非 Agent 模式 - 使用原有逻辑
+      try {
+        if (apiConnected) {
+          const response = await api.chatWithAI(currentInput);
+          const aiReply = { role: 'assistant', content: response.response };
           setAiMessages(prev => [...prev, aiReply]);
-        }, 800);
+        } else {
+          setTimeout(() => {
+            const responses = [
+              '根据您的投放数据分析，目前计划「新品推广_冬季大衣_V1」表现最佳，ROI达到3.8。建议继续加大预算。',
+              '系统检测到您有3条计划正在冷启动中，预计24小时内完成学习期。建议保持当前出价不变。',
+              '近7天整体消耗趋势上升12%，GMV增长24%。投放效率持续优化中。',
+              '检测到素材「Video_003」点击率持续下降，建议更换创意素材或调整投放人群。',
+            ];
+            const aiReply = { role: 'assistant', content: responses[Math.floor(Math.random() * responses.length)] };
+            setAiMessages(prev => [...prev, aiReply]);
+          }, 800);
+        }
+      } catch (error) {
+        console.error('AI chat failed:', error);
+        setAiMessages(prev => [...prev, { role: 'assistant', content: '抱歉，AI 服务暂时不可用，请稍后再试。' }]);
       }
-    } catch (error) {
-      console.error('AI chat failed:', error);
+    }
+  };
+
+  // 确认创建计划
+  const confirmCreateCampaign = async () => {
+    if (!pendingCampaign) return;
+
+    try {
+      const newCampaignData = {
+        name: pendingCampaign.name,
+        budget: pendingCampaign.budget,
+        bid: pendingCampaign.bid,
+        target_type: pendingCampaign.target_type,
+        bid_type: pendingCampaign.bid_type
+      };
+
+      if (apiConnected) {
+        const created = await api.createCampaign(newCampaignData);
+        const formattedCampaign = {
+          ...created,
+          learningStage: created.learning_stage,
+          bidType: created.bid_type,
+        };
+        setCampaigns([formattedCampaign, ...campaigns]);
+      } else {
+        // 离线模式
+        const newCampaign = {
+          id: Date.now(),
+          ...newCampaignData,
+          status: 'learning',
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          cvr: 0,
+          cpa: 0,
+          roi: 0,
+          learningStage: 'learning',
+        };
+        setCampaigns([newCampaign, ...campaigns]);
+      }
+
+      // 添加成功消息
       setAiMessages(prev => [...prev, {
         role: 'assistant',
-        content: '抱歉，AI 服务暂时不可用，请稍后再试。'
+        content: `✅ 计划「${pendingCampaign.name}」已成功创建！预算 ¥${pendingCampaign.budget}，目标出价 ¥${pendingCampaign.bid}。您可以在「计划管理」中查看详情。`
+      }]);
+
+      setPendingCampaign(null);
+    } catch (error) {
+      console.error('Failed to create campaign:', error);
+      setAiMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '创建计划失败，请稍后重试。'
       }]);
     }
+  };
+
+  // 取消创建计划
+  const cancelCreateCampaign = () => {
+    setPendingCampaign(null);
+    setAiMessages(prev => [...prev, {
+      role: 'assistant',
+      content: '已取消创建计划。如需调整参数，请告诉我您的新需求。'
+    }]);
   };
 
   // 快捷问题
@@ -585,7 +815,7 @@ export default function AdPlatform() {
             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" className="w-9 h-9 rounded-full bg-slate-100" />
             <div className="ml-3">
               <p className="text-sm font-medium text-slate-700">Admin User</p>
-              <p className="text-xs text-slate-500">ByteDance Ads</p>
+              <p className="text-xs text-slate-500">Platform Ads</p>
             </div>
           </div>
         </div>
@@ -616,6 +846,13 @@ export default function AdPlatform() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setActiveTab('docs')}
+              className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+              title="帮助文档"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -634,13 +871,39 @@ export default function AdPlatform() {
         <div className="flex-1 overflow-auto p-6 scroll-smooth">
           {isDocsView ? (
             <div className="space-y-8">
+              {/* 语言切换器 */}
+              <div className="flex justify-end">
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                  <button
+                    onClick={() => setDocLang('zh')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      docLang === 'zh'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    中文
+                  </button>
+                  <button
+                    onClick={() => setDocLang('en')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      docLang === 'en'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    English
+                  </button>
+                </div>
+              </div>
+
               <section className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                  <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 mb-4">当前冲刺</span>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-3">{docCurrentFocus.phase}</h2>
-                  <p className="text-sm text-slate-600 leading-relaxed">{docCurrentFocus.description}</p>
+                  <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 mb-4">{docContent.labels.currentSprint}</span>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-3">{docContent.currentFocus.phase}</h2>
+                  <p className="text-sm text-slate-600 leading-relaxed">{docContent.currentFocus.description}</p>
                   <div className="grid gap-3 mt-6 sm:grid-cols-3">
-                    {docCurrentFocus.checkpoints.map((item) => (
+                    {docContent.currentFocus.checkpoints.map((item) => (
                       <div key={item.label} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                         <p className="text-xs text-slate-500">{item.label}</p>
                         <p className="text-lg font-semibold text-slate-900 mt-1">{item.value}</p>
@@ -649,10 +912,10 @@ export default function AdPlatform() {
                   </div>
                 </div>
                 <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 shadow-lg">
-                  <h3 className="text-sm font-semibold text-slate-100 uppercase tracking-[0.2em]">代码触达</h3>
-                  <p className="text-xs text-slate-400 mt-2">文档站直接取材于以下模块</p>
+                  <h3 className="text-sm font-semibold text-slate-100 uppercase tracking-[0.2em]">{docContent.labels.codeReach}</h3>
+                  <p className="text-xs text-slate-400 mt-2">{docContent.labels.codeReachDesc}</p>
                   <ul className="mt-4 space-y-3">
-                    {docCurrentFocus.codeAreas.map((area) => (
+                    {docContent.currentFocus.codeAreas.map((area) => (
                       <li key={area} className="text-sm text-slate-200 flex items-center">
                         <ChevronRight className="w-4 h-4 text-emerald-400 mr-2" />
                         {area}
@@ -660,8 +923,8 @@ export default function AdPlatform() {
                     ))}
                   </ul>
                   <div className="mt-6 p-3 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <p className="text-xs text-slate-300">备注</p>
-                    <p className="text-sm text-white mt-1 leading-relaxed">持续沉淀 PRD 级说明，方便团队对齐研究与工程节奏。</p>
+                    <p className="text-xs text-slate-300">{docContent.labels.note}</p>
+                    <p className="text-sm text-white mt-1 leading-relaxed">{docContent.labels.noteContent}</p>
                   </div>
                 </div>
               </section>
@@ -669,17 +932,17 @@ export default function AdPlatform() {
               <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">已交付能力梳理</h3>
-                    <p className="text-sm text-slate-500 mt-1">总结目前 GrowEngine 控制台可直接展示/操作的功能模块。</p>
+                    <h3 className="text-lg font-semibold text-slate-900">{docContent.labels.completedFeatures}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{docContent.labels.completedFeaturesDesc}</p>
                   </div>
-                  <span className="text-xs font-mono text-slate-500 px-3 py-1 bg-slate-100 rounded-full">依据：src/App.jsx</span>
+                  <span className="text-xs font-mono text-slate-500 px-3 py-1 bg-slate-100 rounded-full">{docContent.labels.basedOn}</span>
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
-                  {completedMilestones.map((item) => (
+                  {docContent.completedMilestones.map((item) => (
                     <div key={item.title} className="border border-slate-100 rounded-xl p-5 bg-slate-50/60 hover:bg-white hover:shadow transition">
                       <div className="flex items-center justify-between">
                         <h4 className="text-base font-semibold text-slate-900">{item.title}</h4>
-                        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">已完成</span>
+                        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{docContent.labels.completed}</span>
                       </div>
                       <p className="text-sm text-slate-600 mt-2 leading-relaxed">{item.description}</p>
                       <ul className="mt-4 space-y-2 text-xs text-slate-600">
@@ -699,13 +962,13 @@ export default function AdPlatform() {
               <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">下一步工作计划</h3>
-                    <p className="text-sm text-slate-500 mt-1">聚焦竞价底座、模型精排、仿真与 Agent 工具链。</p>
+                    <h3 className="text-lg font-semibold text-slate-900">{docContent.labels.roadmap}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{docContent.labels.roadmapDesc}</p>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">未来 3 个迭代</span>
+                  <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{docContent.labels.nextIterations}</span>
                 </div>
                 <div className="mt-6 space-y-6">
-                  {upcomingRoadmap.map((item, index) => (
+                  {docContent.upcomingRoadmap.map((item, index) => (
                     <div key={item.title} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-semibold flex items-center justify-center">
@@ -715,7 +978,7 @@ export default function AdPlatform() {
                       <div className="flex-1 border border-slate-100 rounded-xl p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <h4 className="text-base font-semibold text-slate-900">{item.title}</h4>
-                          <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">规划中</span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">{docContent.labels.planning}</span>
                         </div>
                         <p className="text-sm text-slate-600 mt-2 leading-relaxed">{item.summary}</p>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1423,10 +1686,20 @@ export default function AdPlatform() {
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <span className="text-white font-semibold">智投星</span>
+              {isAgentMode && (
+                <span className="ml-2 px-2 py-0.5 text-[10px] bg-white/20 text-white rounded-full">Agent</span>
+              )}
             </div>
             <div className="flex items-center space-x-2">
-              <button className="text-white/80 hover:text-white text-xs px-2 py-1 hover:bg-white/10 rounded">
-                反馈
+              {/* Agent 模式开关 */}
+              <button
+                onClick={() => setIsAgentMode(!isAgentMode)}
+                className={`text-xs px-2 py-1 rounded transition-colors ${
+                  isAgentMode ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+                title={isAgentMode ? '关闭 Agent 模式' : '开启 Agent 模式'}
+              >
+                <Zap className="w-3 h-3" />
               </button>
               <button
                 onClick={() => setShowAIAssistant(false)}
@@ -1443,26 +1716,34 @@ export default function AdPlatform() {
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-base font-bold text-slate-800 mb-1">我是智投星 你的全能AI助理</h3>
-            <p className="text-xs text-slate-500">随时随地，解决你的投放问题</p>
+            <p className="text-xs text-slate-500">
+              {isAgentMode ? '已开启 Agent 模式 - 可查询数据、自动创建计划' : '随时随地，解决你的投放问题'}
+            </p>
           </div>
 
           {/* 快捷功能卡片 */}
           <div className="px-4 py-3 border-b border-slate-100">
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+              <button
+                onClick={() => { setAiInput('帮我看看现在的广告效果怎么样？'); }}
+                className="p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors text-left"
+              >
                 <div className="flex items-center text-blue-600 mb-1">
                   <BarChart3 className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">AI日报</span>
+                  <span className="text-sm font-medium">查看数据</span>
                 </div>
-                <p className="text-[10px] text-slate-500">昨日数据日报，快速掌握跑量表现</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors">
+                <p className="text-[10px] text-slate-500">快速了解当前投放效果</p>
+              </button>
+              <button
+                onClick={() => { setAiInput('帮我创建一个双12促销计划，预算5000元，目标CPA 50元'); }}
+                className="p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors text-left"
+              >
                 <div className="flex items-center text-purple-600 mb-1">
-                  <BrainCircuit className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">广告诊断</span>
+                  <Plus className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">创建计划</span>
                 </div>
-                <p className="text-[10px] text-slate-500">帮助客户判断投放效果、定位投放问题</p>
-              </div>
+                <p className="text-[10px] text-slate-500">用自然语言创建广告计划</p>
+              </button>
             </div>
           </div>
 
@@ -1474,15 +1755,82 @@ export default function AdPlatform() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] px-3 py-2 rounded-lg text-sm ${msg.role === 'user'
+                  className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${msg.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 text-slate-700'
                     }`}
                 >
                   {msg.content}
+                  {msg.isStreaming && (
+                    <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse rounded-sm"></span>
+                  )}
                 </div>
               </div>
             ))}
+
+            {/* 计划预览卡片 */}
+            {pendingCampaign && (
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-800">AI 生成计划预览</h4>
+                    <p className="text-[10px] text-slate-500">请确认以下信息是否正确</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">计划名称</span>
+                    <span className="text-slate-800 font-medium">{pendingCampaign.name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">日预算</span>
+                    <span className="text-slate-800 font-medium">¥{pendingCampaign.budget.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">目标出价</span>
+                    <span className="text-slate-800 font-medium">¥{pendingCampaign.bid}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">投放目标</span>
+                    <span className="text-slate-800 font-medium">{pendingCampaign.target_type}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">出价方式</span>
+                    <span className="text-blue-600 font-medium">{pendingCampaign.bid_type}</span>
+                  </div>
+                  <div className="border-t border-slate-200 pt-2 mt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">预估展现</span>
+                      <span className="text-emerald-600 font-medium">{pendingCampaign.estimated_impressions?.toLocaleString() || '--'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">预估转化</span>
+                      <span className="text-emerald-600 font-medium">{pendingCampaign.estimated_conversions?.toLocaleString() || '--'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelCreateCampaign}
+                    className="flex-1 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={confirmCreateCampaign}
+                    className="flex-1 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                    确认创建
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 推荐问题 */}
@@ -1495,10 +1843,7 @@ export default function AdPlatform() {
               {quickQuestions.slice(0, 2).map((q, idx) => (
                 <button
                   key={idx}
-                  onClick={() => {
-                    setAiInput(q);
-                    sendToAI();
-                  }}
+                  onClick={() => setAiInput(q)}
                   className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full hover:bg-blue-100 transition-colors truncate max-w-full"
                 >
                   {q}
@@ -1514,15 +1859,21 @@ export default function AdPlatform() {
                 type="text"
                 value={aiInput}
                 onChange={(e) => setAiInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendToAI()}
-                placeholder="请描述你的问题"
-                className="flex-1 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400"
+                onKeyPress={(e) => e.key === 'Enter' && !isStreaming && sendToAI()}
+                placeholder={isStreaming ? 'AI 正在思考中...' : '请描述你的问题'}
+                disabled={isStreaming}
+                className="flex-1 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400 disabled:opacity-50"
               />
               <button
                 onClick={sendToAI}
-                className="ml-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
+                disabled={isStreaming || !aiInput.trim()}
+                className="ml-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-4 h-4 text-white" />
+                {isStreaming ? (
+                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 text-white" />
+                )}
               </button>
             </div>
           </div>
@@ -1539,14 +1890,6 @@ export default function AdPlatform() {
         </div>
       )}
 
-      {/* DEBUG PANEL - Temporarily added for troubleshooting */}
-      <div className="fixed bottom-4 right-20 bg-black/80 text-white p-4 rounded-lg text-xs font-mono z-[10000] pointer-events-none opacity-80 backdrop-blur-sm border border-white/20">
-        <div className="text-yellow-400 font-bold mb-1">DEBUG MODE</div>
-        <div>SimModal: <span className={showSimModal ? "text-green-400" : "text-red-400"}>{String(showSimModal)}</span></div>
-        <div>Campaign: {simCampaign ? `[${simCampaign.id}]` : 'null'}</div>
-        <div>URL: {window.location.search || 'none'}</div>
-        <div className="text-gray-400 mt-1 text-[10px]">Refresh page to apply URL params</div>
-      </div>
-    </div>
+          </div>
   );
 }

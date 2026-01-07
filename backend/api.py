@@ -14,12 +14,20 @@ GrowEngine 后端 API 服务
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import random
 import math
 import uuid
+import json
+import httpx
+import asyncio
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ==================== 应用初始化 ====================
 
@@ -105,6 +113,95 @@ class MetricsSnapshot(BaseModel):
     ctr: float
     cvr: float
     active_campaigns: int
+
+class AgentChatRequest(BaseModel):
+    """Agent 对话请求"""
+    messages: List[Dict[str, str]]
+    enable_tools: bool = True
+
+class CampaignPreview(BaseModel):
+    """AI 生成的计划预览"""
+    name: str
+    budget: float
+    bid: float
+    target_type: str = "商品购买"
+    bid_type: str = "oCPM"
+
+# ==================== LLM Agent 配置 ====================
+
+LLM_CONFIG = {
+    "api_base": os.getenv("LLM_API_BASE", "https://680728.xyz/v1"),
+    "api_key": os.getenv("LLM_API_KEY", ""),
+    "model": os.getenv("LLM_MODEL", "qwen-max")
+}
+
+AGENT_SYSTEM_PROMPT = """你是 GrowEngine 广告投放平台的智能助手「智投星」。你可以帮助用户：
+1. 查询当前广告计划的数据和效果
+2. 分析投放问题并给出优化建议
+3. 根据用户需求创建新的广告计划
+
+你有以下工具可以使用：
+- get_campaigns: 获取当前所有广告计划数据
+- get_diagnosis: 获取智能诊断建议
+- create_campaign_preview: 创建广告计划预览（用户需确认后才会真正创建）
+
+回答时请：
+- 使用中文回复
+- 简洁专业，直击要点
+- 如果需要创建计划，先调用 create_campaign_preview 生成预览
+- 数据展示时使用清晰的格式"""
+
+AGENT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_campaigns",
+            "description": "获取当前所有广告计划的数据，包括名称、状态、预算、消耗、ROI等指标。当用户询问广告效果、投放数据时调用此工具。"
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_diagnosis",
+            "description": "获取智能诊断建议，分析当前投放问题和优化机会。当用户询问如何优化、有什么问题时调用此工具。"
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_campaign_preview",
+            "description": "根据用户需求生成广告计划预览，需要用户确认后才会真正创建。当用户要求创建新计划时调用此工具。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "计划名称，应该包含活动类型和产品信息"
+                    },
+                    "budget": {
+                        "type": "number",
+                        "description": "日预算(元)，默认5000"
+                    },
+                    "bid": {
+                        "type": "number",
+                        "description": "目标CPA出价(元)，默认65"
+                    },
+                    "target_type": {
+                        "type": "string",
+                        "description": "投放目标：商品购买、表单提交、应用下载",
+                        "enum": ["商品购买", "表单提交", "应用下载"]
+                    },
+                    "bid_type": {
+                        "type": "string",
+                        "description": "出价方式",
+                        "enum": ["oCPM", "CPC", "CPM"]
+                    }
+                },
+                "required": ["name", "budget", "bid"]
+            }
+        }
+    }
+]
 
 # ==================== 模拟数据存储 (内存) ====================
 
@@ -541,7 +638,7 @@ async def get_diagnosis():
 @app.post("/api/ai/chat", tags=["AI Assistant"])
 async def ai_chat(message: str = Query(..., min_length=1)):
     """AI 助手对话接口"""
-    
+
     # 简单的关键词匹配响应 (生产环境应接入真正的 LLM)
     responses = {
         "roi": "根据您的投放数据分析，目前计划「新品推广_冬季大衣_V1」表现最佳，ROI达到3.8。建议继续加大预算。",
@@ -551,23 +648,251 @@ async def ai_chat(message: str = Query(..., min_length=1)):
         "出价": "当前建议出价区间为 ¥40-80 (oCPM模式)。系统将根据实时竞争环境自动调整。",
         "人群": "系统发现 [精致妈妈] 人群在同类商品中转化率极高，但在当前投放中占比不足5%。建议添加该定向包。"
     }
-    
+
     # 匹配关键词
     for keyword, response in responses.items():
         if keyword in message.lower():
             return {"response": response, "source": "keyword_match"}
-    
+
     # 默认响应
     default_responses = [
         "根据您的描述，我建议您查看「智能诊断」面板获取更详细的分析。",
         "让我帮您分析一下...目前系统运行正常，如需具体指标请告诉我计划名称或 ID。",
         "您好！我可以帮您分析投放效果、调整出价策略、诊断问题。请问具体想了解什么？"
     ]
-    
+
     return {
         "response": random.choice(default_responses),
         "source": "default"
     }
+
+# ---------- Agent 工具执行 ----------
+
+def execute_tool(tool_name: str, arguments: Dict[str, Any] = None) -> Dict[str, Any]:
+    """执行 Agent 工具调用"""
+
+    if tool_name == "get_campaigns":
+        # 获取所有广告计划数据
+        campaigns = list(MOCK_CAMPAIGNS.values())
+        campaign_list = []
+        for c in campaigns:
+            campaign_list.append({
+                "id": c.id,
+                "name": c.name,
+                "status": c.status,
+                "budget": c.budget,
+                "spend": c.spend,
+                "roi": c.roi,
+                "ctr": c.ctr,
+                "cvr": c.cvr,
+                "learning_stage": c.learning_stage
+            })
+        return {
+            "success": True,
+            "data": campaign_list,
+            "count": len(campaign_list)
+        }
+
+    elif tool_name == "get_diagnosis":
+        # 获取诊断建议
+        campaigns = list(MOCK_CAMPAIGNS.values())
+        diagnostics = []
+
+        for campaign in campaigns:
+            if campaign.learning_stage == "failed":
+                diagnostics.append({
+                    "type": "warning",
+                    "title": f"计划 [{campaign.name[:15]}...] 学习失败",
+                    "suggestion": "检查定向人群或提高出价"
+                })
+            if campaign.roi < 1.0 and campaign.status == "active":
+                diagnostics.append({
+                    "type": "warning",
+                    "title": f"计划 [{campaign.name[:15]}...] ROI 低于盈亏线",
+                    "suggestion": "考虑暂停或优化"
+                })
+            if campaign.roi > 4.0 and campaign.spend < campaign.budget * 0.5:
+                diagnostics.append({
+                    "type": "opportunity",
+                    "title": f"高潜力计划 [{campaign.name[:15]}...]",
+                    "suggestion": f"ROI达到{campaign.roi}，建议提升出价抢量"
+                })
+
+        return {
+            "success": True,
+            "data": diagnostics,
+            "count": len(diagnostics)
+        }
+
+    elif tool_name == "create_campaign_preview":
+        # 创建计划预览（不实际创建，返回预览数据）
+        args = arguments or {}
+        preview = {
+            "name": args.get("name", f"新建计划_{datetime.now().strftime('%m%d')}"),
+            "budget": args.get("budget", 5000),
+            "bid": args.get("bid", 65),
+            "target_type": args.get("target_type", "商品购买"),
+            "bid_type": args.get("bid_type", "oCPM"),
+            "estimated_impressions": int(args.get("budget", 5000) / args.get("bid", 65) * 1000 * 1.5),
+            "estimated_conversions": int(args.get("budget", 5000) / args.get("bid", 65) * 0.8)
+        }
+        return {
+            "success": True,
+            "type": "campaign_preview",
+            "data": preview,
+            "message": "计划预览已生成，等待用户确认创建"
+        }
+
+    return {"success": False, "error": f"未知工具: {tool_name}"}
+
+# ---------- Agent 对话接口 (流式响应) ----------
+
+@app.post("/api/ai/agent", tags=["AI Agent"])
+async def agent_chat(request: AgentChatRequest):
+    """
+    Agentic AI 对话接口 - 支持 SSE 流式响应和工具调用
+
+    该接口会：
+    1. 将用户消息发送给 LLM
+    2. 如果 LLM 决定调用工具，执行工具并将结果返回给 LLM
+    3. 流式返回 LLM 的最终回复
+    """
+
+    async def generate_stream():
+        try:
+            # 构建消息列表
+            messages = [{"role": "system", "content": AGENT_SYSTEM_PROMPT}]
+            messages.extend(request.messages)
+
+            # 调用 LLM API
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # 第一次调用 - 可能会返回工具调用
+                response = await client.post(
+                    f"{LLM_CONFIG['api_base']}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {LLM_CONFIG['api_key']}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": LLM_CONFIG["model"],
+                        "messages": messages,
+                        "tools": AGENT_TOOLS if request.enable_tools else None,
+                        "stream": False  # 先非流式获取，检查是否有工具调用
+                    }
+                )
+
+                if response.status_code != 200:
+                    error_msg = f"LLM API 错误: {response.status_code}"
+                    yield f"data: {json.dumps({'type': 'error', 'content': error_msg}, ensure_ascii=False)}\n\n"
+                    return
+
+                result = response.json()
+                choice = result.get("choices", [{}])[0]
+                message = choice.get("message", {})
+
+                # 检查是否有工具调用
+                tool_calls = message.get("tool_calls", [])
+
+                if tool_calls:
+                    # 有工具调用，执行工具
+                    messages.append(message)
+
+                    for tool_call in tool_calls:
+                        tool_name = tool_call["function"]["name"]
+                        try:
+                            tool_args = json.loads(tool_call["function"].get("arguments", "{}"))
+                        except:
+                            tool_args = {}
+
+                        # 发送工具调用事件
+                        yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'arguments': tool_args}, ensure_ascii=False)}\n\n"
+
+                        # 执行工具
+                        tool_result = execute_tool(tool_name, tool_args)
+
+                        # 发送工具结果事件
+                        yield f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': tool_result}, ensure_ascii=False)}\n\n"
+
+                        # 添加工具结果到消息
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call["id"],
+                            "content": json.dumps(tool_result, ensure_ascii=False)
+                        })
+
+                    # 带工具结果再次调用 LLM，流式返回
+                    stream_response = await client.post(
+                        f"{LLM_CONFIG['api_base']}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {LLM_CONFIG['api_key']}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": LLM_CONFIG["model"],
+                            "messages": messages,
+                            "stream": True
+                        }
+                    )
+
+                    # 流式返回内容
+                    async for line in stream_response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                delta = data.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield f"data: {json.dumps({'type': 'content', 'content': content}, ensure_ascii=False)}\n\n"
+                            except:
+                                pass
+                else:
+                    # 没有工具调用，流式返回内容
+                    stream_response = await client.post(
+                        f"{LLM_CONFIG['api_base']}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {LLM_CONFIG['api_key']}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": LLM_CONFIG["model"],
+                            "messages": messages,
+                            "stream": True
+                        }
+                    )
+
+                    async for line in stream_response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                delta = data.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield f"data: {json.dumps({'type': 'content', 'content': content}, ensure_ascii=False)}\n\n"
+                            except:
+                                pass
+
+        except httpx.TimeoutException:
+            yield f"data: {json.dumps({'type': 'error', 'content': 'LLM 请求超时，请稍后重试'}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': f'服务异常: {str(e)}'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 # ==================== 启动入口 ====================
 

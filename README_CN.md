@@ -29,17 +29,17 @@ GrowEngine 采用模块化架构：
 
 ```mermaid
 graph TD
-    User[用户/访客]
+    User["用户/访客"]
     
     subgraph "广告投放管理"
-        AdminUI[管理后台 (Admin Dashboard)]
-        CoreAPI[核心 API (8000)]
+        AdminUI["管理后台 (Admin Dashboard)"]
+        CoreAPI["核心 API (8000)"]
     end
     
     subgraph "推荐引擎"
-        RecUI[推荐系统 UI]
-        RecAPI[推荐 API (8001)]
-        JavaServ[Java RecSysServer (6010)]
+        RecUI["推荐系统 UI"]
+        RecAPI["推荐 API (8001)"]
+        JavaServ["Java RecSysServer (6010)"]
     end
     
     User --> AdminUI
@@ -49,7 +49,7 @@ graph TD
     RecUI --> RecAPI
     
     RecAPI --> JavaServ
-    RecAPI -- "点击日志" --> Data[(CSV/DB)]
+    RecAPI -- "点击日志" --> Data[("CSV/DB")]
     Data -- "训练" --> Train[模型训练 Pipeline]
     Train --> JavaServ
 ```

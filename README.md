@@ -29,17 +29,17 @@ GrowEngine now operates on a modular architecture:
 
 ```mermaid
 graph TD
-    User[User/Visitor]
+    User["User/Visitor"]
     
     subgraph "Ad Management"
-        AdminUI[Admin Dashboard]
-        CoreAPI[Core API (8000)]
+        AdminUI["Admin Dashboard"]
+        CoreAPI["Core API (8000)"]
     end
     
     subgraph "Recommendation Engine"
-        RecUI[RecSys UI]
-        RecAPI[RecSys API (8001)]
-        JavaServ[Java RecSysServer (6010)]
+        RecUI["RecSys UI"]
+        RecAPI["RecSys API (8001)"]
+        JavaServ["Java RecSysServer (6010)"]
     end
     
     User --> AdminUI
@@ -49,7 +49,7 @@ graph TD
     RecUI --> RecAPI
     
     RecAPI --> JavaServ
-    RecAPI -- "Click Logs" --> Data[(CSV/Clicks)]
+    RecAPI -- "Click Logs" --> Data[("CSV/Clicks")]
     Data -- "Training" --> Train[Model Pipeline]
     Train --> JavaServ
 ```

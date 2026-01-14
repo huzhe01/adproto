@@ -50,3 +50,5 @@ frontend/.eslintcache
 tmp/
 web_visualization/data/simulation_data.js
 CLAUDE.md
+ad_rec_frontend/node_modules/
+ad_rec_backend/__pycache__/

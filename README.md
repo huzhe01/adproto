@@ -1,160 +1,157 @@
-# GrowEngine - 广告投放自动化平台
+# GrowEngine 🚀
 
-## 🎯 项目简介
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![React](https://img.shields.io/badge/react-18-blue.svg)
 
-GrowEngine 是一个全栈广告投放管理平台，提供：
-- 📊 **投放概览**：实时监控消耗、GMV、ROI 等核心指标
-- 📋 **计划管理**：广告计划的创建、编辑、启停
-- 🤖 **智能诊断**：AI 驱动的投放优化建议
-- 🎮 **竞价模拟**：基于 OnlineLp 策略的竞价仿真
+**[中文文档](README_CN.md)**
 
-## 📁 项目结构
+GrowEngine is a comprehensive advertising automation platform evolved to include a **Hybrid Recommendation System**. It combines a robust ad campaign management dashboard with an experimental, high-performance recommendation engine integrated from SparrowRecSys.
 
+## ✨ Features
+
+### 🏢 Core Platform
+- **📊 Real-time Dashboard**: Monitor Spend, GMV, ROI, and core metrics instantly.
+- **📋 Campaign Management**: Full lifecycle management for ad plans (Create, Edit, Pause/Resume).
+- **🤖 Smart Diagnosis**: AI-driven optimization suggestions for ad performance.
+- **🎮 Bidding Simulation**: Simulate bidding strategies based on OnlineLp algorithms.
+
+### 🎯 Hybrid Recommendation System (New)
+Integrated directly with **SparrowRecSys**, offering a "Hybrid Mode" architecture:
+- **Python Backend**: Handles Data Management, Feature Engineering, and Click Collection.
+- **Model Inference**: Supports Java RecSysServer or TensorFlow Serving for NeuralCF, DeepFM, and DIN models.
+- **Interactive UI**: Dedicated React frontend for visualizing recommendations and tracking user interactions.
+
+## 🏗 Architecture
+
+GrowEngine now operates on a modular architecture:
+
+```mermaid
+graph TD
+    User[User/Visitor]
+    
+    subgraph "Ad Management"
+        AdminUI[Admin Dashboard]
+        CoreAPI[Core API (8000)]
+    end
+    
+    subgraph "Recommendation Engine"
+        RecUI[RecSys UI]
+        RecAPI[RecSys API (8001)]
+        JavaServ[Java RecSysServer (6010)]
+    end
+    
+    User --> AdminUI
+    User --> RecUI
+    
+    AdminUI --> CoreAPI
+    RecUI --> RecAPI
+    
+    RecAPI --> JavaServ
+    RecAPI -- "Click Logs" --> Data[(CSV/Clicks)]
+    Data -- "Training" --> Train[Model Pipeline]
+    Train --> JavaServ
 ```
-ProtoAd/
-├── frontend/          # React 前端 (Vite + TailwindCSS)
-│   ├── src/
-│   │   ├── App.jsx   # 主应用组件
-│   │   └── App.css   # 样式文件
-│   ├── Dockerfile
-│   └── package.json
-├── backend/           # Python 后端 (FastAPI)
-│   ├── api.py        # API 服务
-│   ├── simulator.py  # 竞价模拟器
-│   ├── generate_mock_data.py  # 数据生成器
-│   ├── Dockerfile
-│   └── requirements.txt
-├── docker-compose.yml
-└── scripts/
-    └── start-dev.sh  # 开发环境启动脚本
-```
 
-## 🚀 快速开始
-
-### 方式一：本地开发（推荐）
-
-**前置条件：**
-- Node.js 18+
-- Python 3.10+
-
-**启动步骤：**
+## 📁 Project Structure
 
 ```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd ProtoAd
+ProtoAd/
+├── frontend/          # Admin Dashboard (React + Vite + TailwindCSS)
+├── backend/           # Core Ad Management API (FastAPI)
+├── ad_rec_frontend/   # Recommendation System Showcase UI (React)
+├── ad_rec_backend/    # RecSys API, Click Collection & Data Mgr
+├── SparrowRecSys/     # Original Java Recommendation Engine Source
+├── web_visualization/ # Helper visualizations
+├── scripts/           # DevOps and utility scripts
+└── docker-compose.yml # Full stack orchestration
+```
 
-# 2. 启动后端
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** 18+
+- **Python** 3.10+
+- **Docker** (Optional, for full stack deployment)
+
+### 💻 Local Development
+
+#### 1. Core Platform (Management)
+
+**Backend:**
+```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
-python generate_mock_data.py  # 生成测试数据
-uvicorn api:app --reload
+python generate_mock_data.py
+uvicorn api:app --reload --port 8000
+```
 
-# 3. 启动前端（新开终端）
+**Frontend:**
+```bash
 cd frontend
 npm install
 npm run dev
+# Access at http://localhost:5173
 ```
 
-**或使用一键脚本：**
+#### 2. Recommendation System Module
 
+**RecSys Backend:**
 ```bash
-chmod +x scripts/start-dev.sh
-./scripts/start-dev.sh
+cd ad_rec_backend
+# Ensure dependencies are installed (or reuse backend venv if compatible)
+uvicorn api:app --reload --port 8001
 ```
 
-**访问地址：**
-- 前端: http://localhost:5173
-- 后端 API: http://localhost:8000
-- API 文档: http://localhost:8000/docs
+**RecSys Frontend:**
+```bash
+cd ad_rec_frontend
+npm install
+npm run dev
+# Access at http://localhost:3000 (check console for actual port)
+```
 
-### 方式二：Docker 部署
+## 🐳 Docker Deployment
+
+Run the entire suite with one command:
 
 ```bash
-# 构建并启动所有服务
 docker-compose up -d --build
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
 ```
+This will start:
+- Core Backend
+- Core Frontend
+- (Configuration dependent) RecSys services
 
-**访问地址：**
-- 前端: http://localhost:3000
-- 后端 API: http://localhost:8000
+## 📡 API Documentation
 
-## ☁️ 云端部署
+| Service | Base URL | Documentation |
+|---------|----------|---------------|
+| **Core API** | `http://localhost:8000` | `/docs` |
+| **RecSys API** | `http://localhost:8001` | `/docs` |
 
-### 前端部署 (Vercel)
+### Key RecSys Endpoints
+- `GET /api/rec/ads`: Get personalized ad recommendations.
+- `GET /api/rec/similar`: Get similar items (Item2Vec).
+- `POST /api/rec/click`: Log user interaction events.
+- `POST /api/rec/train`: Trigger model retraining pipeline.
 
-```bash
-cd frontend
-npm i -g vercel
-vercel
-```
+## 📈 Star History
 
-### 后端部署 (Railway)
+[![Star History Chart](https://api.star-history.com/svg?repos=huzhe01/adproto&type=Date)](https://star-history.com/#huzhe01/adproto&Date)
 
-1. 访问 [Railway.app](https://railway.app)
-2. 新建项目 → 从 GitHub 导入
-3. 选择 `backend` 目录
-4. 自动识别 Python 项目并部署
+## 🤝 Contributing
 
-### 其他部署选项
-
-| 服务类型 | 推荐平台 | 说明 |
-|---------|---------|------|
-| 前端静态 | Vercel / Netlify / Cloudflare Pages | 免费，自动 CI/CD |
-| 后端 API | Railway / Render / Fly.io | 有免费额度 |
-| 全栈 | Docker + VPS | 自主可控 |
-
-## 📡 API 接口
-
-### 核心接口
-
-| 方法 | 路径 | 说明 |
-|-----|------|------|
-| GET | `/api/campaigns` | 获取广告计划列表 |
-| POST | `/api/campaigns` | 创建广告计划 |
-| PUT | `/api/campaigns/{id}` | 更新广告计划 |
-| DELETE | `/api/campaigns/{id}` | 删除广告计划 |
-| GET | `/api/metrics/realtime` | 实时指标 |
-| GET | `/api/metrics/trend` | 趋势数据 |
-| POST | `/api/bidding/simulate` | 竞价模拟 |
-| GET | `/api/diagnosis` | 智能诊断 |
-| POST | `/api/ai/chat` | AI 对话 |
-
-详细文档请访问: `http://localhost:8000/docs`
-
-## 🛠 技术栈
-
-**前端：**
-- React 18
-- Vite
-- TailwindCSS
-- Recharts
-- Lucide Icons
-
-**后端：**
-- FastAPI
-- Uvicorn
-- Pandas / NumPy
-- Pydantic
-
-## 📝 开发计划
-
-- [x] 投放驾驶舱 1.0
-- [x] 计划管理迭代
-- [x] 投放创建工作流
-- [ ] 竞价后端核心
-- [ ] 模型精排服务
-- [ ] 竞价仿真模拟器
-- [ ] Agentic 自动投放
+We welcome contributions!
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT License
+Distributed under the MIT License. See `LICENSE` for more information.

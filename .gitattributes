@@ -1,0 +1,8 @@
+# Exclude frontend code from language statistics to highlight Backend/App code
+frontend/** linguist-vendored
+ad_rec_frontend/** linguist-vendored
+web_visualization/** linguist-vendored
+
+# Ensure Java and Python are detected normally (default, but good to be explicit if needed)
+*.java linguist-detectable
+*.py linguist-detectable

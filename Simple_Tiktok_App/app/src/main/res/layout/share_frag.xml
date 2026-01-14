@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="5dp" >
+
+    <TextView
+        android:id="@+id/icon_section_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="分享到"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <com.example.toytiktok.view.IconSetView
+        android:id="@+id/icon_set_one"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:dataSet="0" />
+
+    <View
+        android:id="@+id/icon_seperate_line"
+        android:layout_marginTop="2dp"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@color/unchosen"/>
+
+    <com.example.toytiktok.view.IconSetView
+        android:id="@+id/icon_set_two"
+        android:layout_marginTop="2dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:dataSet="1" />
+
+    <Button
+        android:id="@+id/share_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:gravity="center"
+        android:text="取消"
+        android:background="@color/black"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
+
+</LinearLayout>

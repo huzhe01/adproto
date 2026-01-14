@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ToyTikTok</string>
+    <string name="homepage">首页</string>
+    <string name="friend">广告</string>
+    <string name="message">消息</string>
+    <string name="me">我</string>
+</resources>

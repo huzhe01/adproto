@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:id="@+id/item_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+
+    <com.example.toytiktok.view.CustomView
+        android:id="@+id/item_video"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/item_animation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        app:lottie_autoPlay="false"
+        app:lottie_loop="true"
+        app:lottie_rawRes="@raw/pause" />
+
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/pop_heart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        app:lottie_autoPlay="false"
+        app:lottie_loop="false"
+        app:lottie_rawRes="@raw/pop" />
+
+    <SeekBar
+        android:id="@+id/item_seekbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="50dp"
+        android:layout_alignParentBottom="true"/>
+
+
+    <com.example.toytiktok.view.MarqueeView
+        android:id="@+id/item_marquee"
+        android:drawableLeft="@drawable/douyin"
+        android:drawableStart="@drawable/douyin"
+        android:drawablePadding="5dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_above="@id/item_seekbar"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <TextView
+        android:id="@+id/item_content"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textColor="@color/white"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_above="@id/item_marquee"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp" />
+
+    <TextView
+        android:id="@+id/item_author"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_above="@id/item_content"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp" />
+
+
+    <LinearLayout
+        android:id="@+id/item_iconset"
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_above="@id/item_seekbar"
+        android:layout_marginBottom="20dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginEnd="10dp">
+
+
+
+        <com.example.toytiktok.view.IconWithContentView
+            android:id="@+id/btn_heart"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp" />
+
+        <com.example.toytiktok.view.IconWithContentView
+            android:id="@+id/btn_message"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp" />
+
+        <com.example.toytiktok.view.IconWithContentView
+            android:id="@+id/btn_share"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp" />
+
+        <ImageView
+            android:id="@+id/item_player"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/player"
+            android:scaleType="centerCrop"
+            android:background="@null" />
+
+    </LinearLayout>
+
+
+    <ImageView
+        android:id="@+id/item_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/waiting"
+        android:scaleType="centerCrop"/>
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/load_effect"
+        android:layout_centerInParent="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_rawRes="@raw/loading" />
+
+
+
+</RelativeLayout>

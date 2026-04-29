@@ -58,8 +58,12 @@ source "$VENV_DIR/bin/activate"
 echo "  安装核心与推荐后端依赖..."
 pip install -q -r backend/requirements.txt -r ad_rec_backend/requirements.txt
 
-echo "  生成核心平台测试数据..."
-python backend/generate_mock_data.py
+if [ ! -f "backend/data/campaigns.json" ] || [ ! -f "backend/data/metrics_timeseries.json" ] || [ ! -f "backend/data/traffic/period-1.csv" ]; then
+    echo "  生成核心平台测试数据..."
+    python backend/generate_mock_data.py
+else
+    echo "  核心平台测试数据已存在，跳过生成。"
+fi
 
 # ==================== Node 设置 ====================
 echo -e "\n${BLUE}[3/4] 设置前端环境...${NC}"
@@ -100,7 +104,7 @@ sleep 3
 echo ""
 echo -e "${GREEN}=========================================="
 echo "  ✅ GrowEngine 开发环境已启动！"
-echo "===========================================${NC}"
+echo -e "===========================================${NC}"
 echo ""
 echo -e "  ${YELLOW}核心前端:${NC} http://localhost:5173/adproto/"
 echo -e "  ${YELLOW}核心 API:${NC}  http://localhost:8000/docs"

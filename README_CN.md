@@ -77,13 +77,28 @@ ProtoAd/
 
 ### 💻 本地开发
 
-#### 1. 核心平台 (投放管理)
+#### 一键启动全部服务
+
+```bash
+./scripts/start-dev.sh
+```
+
+脚本会创建或复用 `~/venv/huzhe`，安装两个后端依赖、两个前端依赖，并同时启动：
+
+| 服务 | 地址 |
+|------|------|
+| 核心管理前端 | `http://localhost:5173/adproto/` |
+| 核心 API | `http://localhost:8000` |
+| 推荐系统前端 | `http://localhost:5174` |
+| 推荐系统 API | `http://localhost:8001` |
+
+#### 手动启动：核心平台 (投放管理)
 
 **后端:**
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate
+python3 -m venv ~/venv/huzhe
+source ~/venv/huzhe/bin/activate
 pip install -r requirements.txt
 python generate_mock_data.py
 uvicorn api:app --reload --port 8000
@@ -94,16 +109,16 @@ uvicorn api:app --reload --port 8000
 cd frontend
 npm install
 npm run dev
-# 访问地址: http://localhost:5173
+# 访问地址: http://localhost:5173/adproto/
 ```
 
-#### 2. 推荐系统模块
+#### 手动启动：推荐系统模块
 
 **推荐后端:**
 ```bash
-cd ad_rec_backend
-# 确保依赖已安装 (如果兼容可复用 backend 的 venv)
-uvicorn api:app --reload --port 8001
+source ~/venv/huzhe/bin/activate
+pip install -r ad_rec_backend/requirements.txt
+uvicorn ad_rec_backend.api:app --reload --port 8001
 ```
 
 **推荐前端:**
@@ -111,7 +126,7 @@ uvicorn api:app --reload --port 8001
 cd ad_rec_frontend
 npm install
 npm run dev
-# 访问地址: http://localhost:3000 (具体端口请查看控制台)
+# 访问地址: http://localhost:5174
 ```
 
 ## 🐳 Docker 部署
@@ -124,7 +139,15 @@ docker-compose up -d --build
 这将启动：
 - 核心后端
 - 核心前端
-- (取决于配置) 推荐系统相关服务
+- 推荐后端
+- 推荐前端
+
+| 服务 | 地址 |
+|------|------|
+| 核心管理前端 | `http://localhost:3000/adproto/` |
+| 核心 API | `http://localhost:8000` |
+| 推荐系统前端 | `http://localhost:3001` |
+| 推荐系统 API | `http://localhost:8001` |
 
 ## 📡 API 文档
 

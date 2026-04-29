@@ -77,41 +77,26 @@ ProtoAd/
 
 ### 💻 Local Development
 
-#### 1. Core Platform (Management)
+Start all four development services with one command:
 
-**Backend:**
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python generate_mock_data.py
-uvicorn api:app --reload --port 8000
+./scripts/start-dev.sh
 ```
 
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-# Access at http://localhost:5173
-```
+The script installs Python and Node dependencies as needed, reuses
+`$HOME/venv/huzhe` by default, and starts:
 
-#### 2. Recommendation System Module
+| Service | URL |
+|---------|-----|
+| Core Frontend | `http://localhost:5173/adproto/` |
+| Core API | `http://localhost:8000/docs` |
+| RecSys Frontend | `http://localhost:5174` |
+| RecSys API | `http://localhost:8001/docs` |
 
-**RecSys Backend:**
-```bash
-cd ad_rec_backend
-# Ensure dependencies are installed (or reuse backend venv if compatible)
-uvicorn api:app --reload --port 8001
-```
+To use a different Python virtual environment path:
 
-**RecSys Frontend:**
 ```bash
-cd ad_rec_frontend
-npm install
-npm run dev
-# Access at http://localhost:3000 (check console for actual port)
+VENV_DIR=.venv ./scripts/start-dev.sh
 ```
 
 ## 🐳 Docker Deployment
@@ -119,12 +104,13 @@ npm run dev
 Run the entire suite with one command:
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 This will start:
-- Core Backend
-- Core Frontend
-- (Configuration dependent) RecSys services
+- Core Backend: `http://localhost:8000`
+- Core Frontend: `http://localhost:3000/adproto/`
+- RecSys Backend: `http://localhost:8001`
+- RecSys Frontend: `http://localhost:3001`
 
 ## 📡 API Documentation
 

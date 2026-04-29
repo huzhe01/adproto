@@ -8,12 +8,13 @@
 #   ./scripts/start-dev.sh
 #
 # 服务访问:
-#   前端: http://localhost:5173
-#   后端: http://localhost:8000
-#   API文档: http://localhost:8000/docs
+#   核心前端: http://localhost:5173/adproto/
+#   核心后端: http://localhost:8000
+#   推荐前端: http://localhost:5174
+#   推荐后端: http://localhost:8001
 #
 
-set -e
+set -euo pipefail
 
 echo "=========================================="
 echo "  GrowEngine 开发环境启动脚本"
@@ -25,8 +26,8 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 获取项目根目录
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENV_DIR="${VENV_DIR:-$HOME/venv/huzhe}"
 cd "$PROJECT_ROOT"
 
 echo -e "\n${BLUE}[1/4] 检查依赖...${NC}"
@@ -45,77 +46,70 @@ if ! command -v node &> /dev/null; then
 fi
 echo "✓ Node.js: $(node --version)"
 
-# ==================== 后端设置 ====================
-echo -e "\n${BLUE}[2/4] 设置后端环境...${NC}"
+# ==================== Python 设置 ====================
+echo -e "\n${BLUE}[2/4] 设置 Python 环境...${NC}"
 
-cd backend
-
-# 创建虚拟环境（如果不存在）
-if [ ! -d "venv" ]; then
-    echo "  创建 Python 虚拟环境..."
-    python3 -m venv venv
+if [ ! -d "$VENV_DIR" ]; then
+    echo "  创建 Python 虚拟环境: $VENV_DIR"
+    python3 -m venv "$VENV_DIR"
 fi
 
-# 激活虚拟环境
-source venv/bin/activate
+source "$VENV_DIR/bin/activate"
+echo "  安装核心与推荐后端依赖..."
+pip install -q -r backend/requirements.txt -r ad_rec_backend/requirements.txt
 
-# 安装依赖
-echo "  安装 Python 依赖..."
-pip install -q -r requirements.txt
+if [ ! -f "backend/data/campaigns.json" ] || [ ! -f "backend/data/metrics_timeseries.json" ] || [ ! -f "backend/data/traffic/period-1.csv" ]; then
+    echo "  生成核心平台测试数据..."
+    python backend/generate_mock_data.py
+else
+    echo "  核心平台测试数据已存在，跳过生成。"
+fi
 
-# 生成 Mock 数据
-echo "  生成测试数据..."
-python generate_mock_data.py
-
-cd "$PROJECT_ROOT"
-
-# ==================== 前端设置 ====================
+# ==================== Node 设置 ====================
 echo -e "\n${BLUE}[3/4] 设置前端环境...${NC}"
 
-cd frontend
-
-# 安装依赖（如果 node_modules 不存在）
-if [ ! -d "node_modules" ]; then
-    echo "  安装 npm 依赖..."
-    npm install
+if [ ! -d "frontend/node_modules" ]; then
+    echo "  安装核心前端 npm 依赖..."
+    npm install --prefix frontend
 fi
 
-cd "$PROJECT_ROOT"
+if [ ! -d "ad_rec_frontend/node_modules" ]; then
+    echo "  安装推荐前端 npm 依赖..."
+    npm install --prefix ad_rec_frontend
+fi
 
 # ==================== 启动服务 ====================
 echo -e "\n${BLUE}[4/4] 启动服务...${NC}"
 
-# 启动后端（后台运行）
-echo "  启动后端服务 (端口 8000)..."
-cd backend
-source venv/bin/activate
-uvicorn api:app --reload --host 0.0.0.0 --port 8000 &
-BACKEND_PID=$!
+PIDS=()
 
-cd "$PROJECT_ROOT"
+echo "  启动核心后端服务 (端口 8000)..."
+(cd backend && source "$VENV_DIR/bin/activate" && uvicorn api:app --reload --host 0.0.0.0 --port 8000) &
+PIDS+=($!)
 
-# 等待后端启动
-sleep 2
+echo "  启动推荐后端服务 (端口 8001)..."
+(source "$VENV_DIR/bin/activate" && uvicorn ad_rec_backend.api:app --reload --host 0.0.0.0 --port 8001) &
+PIDS+=($!)
 
-# 启动前端
-echo "  启动前端服务 (端口 5173)..."
-cd frontend
-npm run dev &
-FRONTEND_PID=$!
+echo "  启动核心前端服务 (端口 5173)..."
+npm run dev --prefix frontend -- --host 0.0.0.0 --port 5173 &
+PIDS+=($!)
 
-cd "$PROJECT_ROOT"
+echo "  启动推荐前端服务 (端口 5174)..."
+npm run dev --prefix ad_rec_frontend -- --host 0.0.0.0 --port 5174 &
+PIDS+=($!)
 
-# 等待前端启动
 sleep 3
 
 echo ""
 echo -e "${GREEN}=========================================="
 echo "  ✅ GrowEngine 开发环境已启动！"
-echo "===========================================${NC}"
+echo -e "===========================================${NC}"
 echo ""
-echo -e "  ${YELLOW}前端:${NC}     http://localhost:5173"
-echo -e "  ${YELLOW}后端 API:${NC} http://localhost:8000"
-echo -e "  ${YELLOW}API 文档:${NC} http://localhost:8000/docs"
+echo -e "  ${YELLOW}核心前端:${NC} http://localhost:5173/adproto/"
+echo -e "  ${YELLOW}核心 API:${NC}  http://localhost:8000/docs"
+echo -e "  ${YELLOW}推荐前端:${NC} http://localhost:5174"
+echo -e "  ${YELLOW}推荐 API:${NC}  http://localhost:8001/docs"
 echo ""
 echo -e "  按 ${YELLOW}Ctrl+C${NC} 停止所有服务"
 echo ""
@@ -124,8 +118,9 @@ echo ""
 cleanup() {
     echo ""
     echo "正在停止服务..."
-    kill $BACKEND_PID 2>/dev/null
-    kill $FRONTEND_PID 2>/dev/null
+    for pid in "${PIDS[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
     echo "✓ 服务已停止"
     exit 0
 }

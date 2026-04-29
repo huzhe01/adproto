@@ -2,14 +2,15 @@
 # ==========================================
 #
 # 使用方法:
-#   启动全部服务: docker-compose up -d
-#   停止服务:     docker-compose down
-#   查看日志:     docker-compose logs -f
-#   重新构建:     docker-compose up -d --build
+#   启动全部服务: docker compose up -d --build
+#   停止服务:     docker compose down
+#   查看日志:     docker compose logs -f
 #
 # 服务说明:
-#   - frontend: React 前端 (端口 3000)
-#   - backend:  FastAPI 后端 (端口 8000)
+#   - frontend:        管理后台前端 (端口 3000)
+#   - backend:         核心 FastAPI 后端 (端口 8000)
+#   - ad-rec-frontend: 推荐系统前端 (端口 3001)
+#   - ad-rec-backend:  推荐 FastAPI 后端 (端口 8001)
 #
 
 version: '3.8'
@@ -49,6 +50,42 @@ services:
       - growengine-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== 推荐系统前端服务 ====================
+  ad-rec-frontend:
+    build:
+      context: ./ad_rec_frontend
+      dockerfile: Dockerfile
+    container_name: growengine-ad-rec-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - ad-rec-backend
+    restart: unless-stopped
+    networks:
+      - growengine-network
+
+  # ==================== 推荐系统后端服务 ====================
+  ad-rec-backend:
+    build:
+      context: ./ad_rec_backend
+      dockerfile: Dockerfile
+    container_name: growengine-ad-rec-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+    volumes:
+      - ./ad_rec_backend/data:/app/ad_rec_backend/data
+    restart: unless-stopped
+    networks:
+      - growengine-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3

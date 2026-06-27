@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>大麦助手 Agent Mode 原型 v2</title>
+  <style>
+    :root{
+      --bg:#f4f5f8;--panel:#0d1320;--panel2:#111827;--card:#171d29;--line:#242b3a;
+      --text:#e7ebf3;--muted:#8d96a8;--primary:#6d35e8;--primary2:#8b5cf6;
+      --cyan:#20d3ee;--green:#35d07f;--amber:#f5b84b;--red:#ff6b72;--blue:#4da3ff;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;color:#172033}
+    .wrap{padding:22px 28px}.title{font-size:22px;font-weight:800;margin:0 0 8px}.desc{font-size:13px;color:#7a8291;margin-bottom:20px}
+    .app{height:calc(100vh - 110px);min-height:720px;background:#0a101c;border-radius:18px;overflow:hidden;box-shadow:0 16px 48px rgba(15,23,42,.18);display:grid;grid-template-columns:230px 1fr 330px}
+    .side,.chat{background:#0c1320;color:var(--text);border-color:#202838}.side{border-right:1px solid var(--line);display:flex;flex-direction:column}.chat{border-left:1px solid var(--line);display:flex;flex-direction:column}
+    .main{background:#0a101c;color:var(--text);display:flex;flex-direction:column;min-width:0}.top{height:58px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+    .brand{display:flex;align-items:center;gap:10px}.logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#2563eb);display:grid;place-items:center;font-weight:900;color:white}
+    .small{font-size:11px;color:var(--muted)}.tabs{display:flex;gap:8px;background:#171d2b;border:1px solid var(--line);padding:5px;border-radius:13px}.tab{border:0;background:transparent;color:#aeb6c6;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer}.tab.active{background:linear-gradient(135deg,var(--primary),#4f46e5);color:white}
+    .live{font-size:12px;text-align:right}.live b{color:white}.live em{color:#ffbe55;font-style:normal;font-weight:800}
+    .section{padding:14px;border-bottom:1px solid var(--line)}.section h3{font-size:14px;margin:0 0 10px;color:white}.collapse{float:right;width:22px;height:22px;border:1px solid var(--line);border-radius:7px;color:#9aa3b5;display:grid;place-items:center}
+    .project{background:#171d2b;border:1px solid #273044;border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer}.project.active{border-color:var(--primary2);box-shadow:inset 0 0 0 1px rgba(139,92,246,.25);background:#1c1a35}
+    .project .name{font-size:13px;font-weight:800;color:white;margin-bottom:6px}.project .meta{font-size:11px;color:#9aa3b5;line-height:1.6}.tag{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;margin-top:8px;background:#233044;color:#b7c1d5}.tag.green{background:rgba(53,208,127,.15);color:#71e5aa}.tag.purple{background:rgba(139,92,246,.18);color:#c4b5fd}.tag.amber{background:rgba(245,184,75,.16);color:#ffd58a}
+    .agent{display:flex;align-items:center;gap:8px;font-size:12px;margin:9px 0;color:#dbe2ef}.dot{width:7px;height:7px;border-radius:50%;background:var(--primary2);box-shadow:0 0 0 4px rgba(139,92,246,.1)}.dot.cyan{background:var(--cyan)}.dot.green{background:var(--green)}.dot.amber{background:var(--amber)}.dot.blue{background:var(--blue)}
+    .agent span:last-child{margin-left:auto;color:#8d96a8;font-size:11px}.canvas{padding:18px;overflow:auto}.page{display:none}.page.active{display:block}.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+    .card{background:#111827;border:1px solid var(--line);border-radius:16px;padding:16px}.card h2{font-size:20px;margin:0;color:white}.card h4{margin:0 0 12px;font-size:14px;color:white}.hint{font-size:12px;color:#8d96a8;margin-top:4px}.metric{background:#171d29;border:1px solid #252f42;border-radius:13px;padding:13px}.metric label{display:block;font-size:11px;color:#8b95a7;margin-bottom:6px}.metric strong{font-size:20px;color:white}.metric small{display:block;color:#54d995;margin-top:4px}.metric.warn small{color:#ffcd72}.metric.red small{color:#ff7d84}
+    .info{background:#171d29;border:1px solid #252f42;border-radius:12px;padding:12px}.info label{display:block;font-size:11px;color:#8d96a8;margin-bottom:7px}.info b{color:white;font-size:14px}.plan{position:relative;background:#121a29;border:1px solid #2a3347;border-radius:16px;padding:15px}.plan.pick{border-color:var(--primary2);background:linear-gradient(180deg,rgba(109,53,232,.2),#121a29)}.badge{position:absolute;right:12px;top:-9px;background:var(--primary);color:white;border-radius:999px;font-size:10px;padding:4px 8px}
+    .ul{margin:10px 0 0;padding:0;list-style:none}.ul li{font-size:12px;color:#bdc6d6;line-height:1.75}.ul li:before{content:"• ";color:var(--primary2);font-weight:900}.btn{border:0;border-radius:12px;padding:10px 14px;color:white;background:linear-gradient(135deg,var(--primary),#4f46e5);font-weight:800;cursor:pointer}.btn.secondary{background:#1b2434;color:#cbd5e1;border:1px solid #2b3548}.btn.green{background:linear-gradient(135deg,#10b981,#16a34a)}
+    .barbox{margin:12px 0}.barrow{display:flex;justify-content:space-between;font-size:12px;color:#cbd5e1;margin-bottom:7px}.bar{height:9px;border-radius:999px;background:#222b3c;overflow:hidden}.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),#3b82f6)}
+    .timeline{position:relative}.tl{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid #20283a}.tl time{font-size:11px;color:#8d96a8}.tl b{font-size:12px;color:white}.tl p{margin:4px 0 0;font-size:12px;color:#aeb8ca;line-height:1.45}
+    table{width:100%;border-collapse:collapse;font-size:12px}th{color:#8d96a8;text-align:left;background:#161e2c}td,th{padding:10px;border-bottom:1px solid #20283a}td{color:#d9e1ef}.score{font-weight:900;color:#54d995}.risk{color:#ffcd72}
+    .chatHead{height:58px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 14px}.chatBody{padding:14px;overflow:auto;flex:1}.msg{max-width:88%;padding:11px 12px;border-radius:13px;font-size:12px;line-height:1.6;margin-bottom:12px}.msg.ai{background:#171d29;border:1px solid #252f42;color:#dbe4f3}.msg.user{margin-left:auto;background:linear-gradient(135deg,var(--primary),#7c3aed);color:white}.chatInput{padding:13px;border-top:1px solid var(--line)}.input{height:42px;border-radius:13px;background:#151d2b;border:1px solid #2a3448;display:flex;align-items:center;padding:0 12px;color:#667085;font-size:12px}
+    .step{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.num{width:22px;height:22px;border-radius:50%;background:#233044;color:#cbd5e1;display:grid;place-items:center;font-size:11px;font-weight:800}.step.done .num{background:var(--green);color:white}.step.active .num{background:var(--primary);color:white}.step div:last-child{font-size:12px;color:#bdc6d6;line-height:1.5}.white{color:white}.split{display:flex;gap:10px;flex-wrap:wrap}.pill{font-size:11px;color:#cbd5e1;background:#1b2434;border:1px solid #2a3549;border-radius:999px;padding:6px 9px}
+    @media(max-width:1100px){.app{grid-template-columns:190px 1fr 290px}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Agent Mode 页面布局预览</h1>
+    <div class="desc">方向：左侧预算项目与子 Agent 运行状态；中间展示当前会话调出的执行画布；右侧为 Orchestrator 主会话。一个会话对应一笔预算托管项目。</div>
+    <div class="app">
+      <aside class="side">
+        <div class="section">
+          <h3>预算项目 <span class="collapse">‹</span></h3>
+          <div class="project active">
+            <div class="name">便携榨汁杯 · 美国高峰直播</div>
+            <div class="meta">预算 $5,000 · ROAS ≥ 3.0<br/>TikTok + Meta · 20:00-23:00</div>
+            <span class="tag purple">Planning 中</span>
+          </div>
+          <div class="project">
+            <div class="name">美妆刷套装 · 英国场</div>
+            <div class="meta">预算 $3,200 · ROAS ≥ 2.8<br/>Meta + TikTok · 明晚</div>
+            <span class="tag amber">待确认</span>
+          </div>
+          <div class="project">
+            <div class="name">瑜伽服套装 · 加拿大复盘</div>
+            <div class="meta">预算 $4,500 · 已结束<br/>增量毛利 +$617</div>
+            <span class="tag green">已复盘</span>
+          </div>
+        </div>
+        <div class="section" style="flex:1">
+          <h3>子 Agent 状态 <span class="collapse">›</span></h3>
+          <div class="agent"><i class="dot"></i><b>Orchestrator</b><span>主控</span></div>
+          <div class="agent"><i class="dot blue"></i><b>Planning</b><span>规划</span></div>
+          <div class="agent"><i class="dot cyan"></i><b>Delivery</b><span>待执行</span></div>
+          <div class="agent"><i class="dot amber"></i><b>Analysis</b><span>待观察</span></div>
+          <div class="agent"><i class="dot green"></i><b>Signal</b><span>待采集</span></div>
+          <div class="card" style="margin-top:18px;padding:12px">
+            <h4>共享状态</h4>
+            <div class="hint">预算账本、直播状态、护栏、动作证据、线索质量分、策略记忆统一写入同一个预算项目。</div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="top">
+          <div class="brand"><div class="logo">麦</div><div><b>MaiStream 托管助手</b><div class="small">广告主预算托管 · 直播间投流工作台</div></div></div>
+          <nav class="tabs">
+            <button class="tab active" data-page="plan">方案规划</button>
+            <button class="tab" data-page="control">直播托管</button>
+            <button class="tab" data-page="revenue">收益效果</button>
+            <button class="tab" data-page="leads">线索中心</button>
+          </nav>
+          <div class="live">直播中 · 02:14:30<br/><b>$5,000</b> / <em>$2,180</em></div>
+        </header>
+
+        <section class="canvas">
+          <div class="page active" id="plan">
+            <div class="card">
+              <h2>方案规划</h2>
+              <div class="hint">Planning Agent 输出：从主会话提炼预算项目信息，设计全托管投放方案。</div>
+              <div class="grid g4" style="margin-top:16px">
+                <div class="info"><label>投放预算</label><b>$5,000</b></div>
+                <div class="info"><label>投放渠道</label><b>TikTok + Meta</b></div>
+                <div class="info"><label>投放商品</label><b>便携榨汁杯</b></div>
+                <div class="info"><label>直播间</label><b>美国高峰直播 A</b></div>
+                <div class="info"><label>收益目标</label><b>ROAS ≥ 3.0</b></div>
+                <div class="info"><label>投放时间</label><b>20:00-23:00</b></div>
+                <div class="info"><label>库存 / 毛利</label><b>1,200 件 / 55%</b></div>
+                <div class="info"><label>红线约束</label><b>单次调仓≤15%</b></div>
+              </div>
+            </div>
+
+            <div class="grid g3" style="margin-top:16px">
+              <div class="plan">
+                <h4>直播间 A · 达人实测</h4>
+                <ul class="ul">
+                  <li>冷启动：TikTok $1,190 / Meta $510</li>
+                  <li>前 30 分钟主看 CTR、互动率、停留</li>
+                  <li>后续策略：TikTok 拉量，Meta 承接高意向</li>
+                  <li>预估 ROAS 2.8-3.2，低风险</li>
+                </ul>
+                <button class="btn secondary">选择保守方案</button>
+              </div>
+              <div class="plan pick">
+                <span class="badge">推荐</span>
+                <h4>直播间 B · 品牌自播</h4>
+                <ul class="ul">
+                  <li>冷启动：TikTok $1,050 / Meta $1,050</li>
+                  <li>10 分钟观察窗，动态比较边际 ROAS</li>
+                  <li>后续策略：高意向线索高的平台加码</li>
+                  <li>预估 ROAS 3.0-3.6，收益/风险均衡</li>
+                </ul>
+                <button class="btn">选择并准备上线</button>
+              </div>
+              <div class="plan">
+                <h4>直播间 C · 清仓冲量</h4>
+                <ul class="ul">
+                  <li>冷启动：TikTok $480 / Meta $720</li>
+                  <li>高峰期抢再营销与相似人群</li>
+                  <li>后续策略：库存安全时主动扩量</li>
+                  <li>预估 ROAS 3.2-4.1，高波动</li>
+                </ul>
+                <button class="btn secondary">选择进取方案</button>
+              </div>
+            </div>
+
+            <div class="grid g2" style="margin-top:16px">
+              <div class="card">
+                <h4>上线前托管流程</h4>
+                <div class="step done"><i class="num">1</i><div><b class="white">主会话理解目标</b><br/>抽取预算、渠道、商品、直播间、目标、时间、红线约束。</div></div>
+                <div class="step active"><i class="num">2</i><div><b class="white">Planning 输出三案</b><br/>每案明确冷启动预算分配与后续动态调控策略。</div></div>
+                <div class="step"><i class="num">3</i><div><b class="white">用户对话修改细节</b><br/>例如「预算更稳一点，不要低于 ROAS 3.0」。</div></div>
+                <div class="step"><i class="num">4</i><div><b class="white">Delivery 创建计划并上线</b><br/>主 Agent 在会话中回报创建、审核、上线状态。</div></div>
+              </div>
+              <div class="card">
+                <h4>可修改项</h4>
+                <div class="split">
+                  <span class="pill">渠道比例</span><span class="pill">冷启动金额</span><span class="pill">观察窗口</span><span class="pill">审批阈值</span><span class="pill">禁用人群</span><span class="pill">目标 ROAS</span><span class="pill">素材启停</span><span class="pill">库存红线</span>
+                </div>
+                <div class="hint" style="margin-top:14px">所有修改都通过右侧主会话完成，由 Orchestrator 更新预算项目状态，再调用 Planning 重新计算。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page" id="control">
+            <div class="card">
+              <h2>直播托管控制后台</h2>
+              <div class="hint">用户说「帮我调出直播间 TikTok 托管后台」后，中间画布切换到投放监控大屏。</div>
+              <div class="grid g4" style="margin-top:16px">
+                <div class="metric"><label>实时消耗</label><strong>$2,180</strong><small>预算利用率 43.6%</small></div>
+                <div class="metric"><label>成交金额</label><strong>$6,540</strong><small>较基线 +18%</small></div>
+                <div class="metric"><label>实时 ROAS</label><strong>3.00</strong><small>达到目标</small></div>
+                <div class="metric warn"><label>千次观看成本</label><strong>$4.8</strong><small>TikTok 流量变贵</small></div>
+                <div class="metric"><label>曝光 / 观看</label><strong>41.2万</strong><small>进入高峰流量</small></div>
+                <div class="metric"><label>点击率 CTR</label><strong>3.8%</strong><small>Meta +0.6pp</small></div>
+                <div class="metric"><label>转化率 CVR</label><strong>6.2%</strong><small>再营销人群最佳</small></div>
+                <div class="metric red"><label>库存余量</label><strong>740</strong><small>低于 600 自动降速</small></div>
+              </div>
+            </div>
+
+            <div class="grid g2" style="margin-top:16px">
+              <div class="card">
+                <h4>预算轨道</h4>
+                <div class="barbox"><div class="barrow"><span>TikTok Ads · 已消耗 $1,180 / 预算 $1,700</span><b>69%</b></div><div class="bar"><div class="fill" style="width:69%"></div></div></div>
+                <div class="barbox"><div class="barrow"><span>Meta Ads · 已消耗 $1,000 / 预算 $1,700</span><b>59%</b></div><div class="bar"><div class="fill" style="width:59%;background:linear-gradient(90deg,#8b5cf6,#ec4899)"></div></div></div>
+                <div class="hint">账本守恒：总预算 $5,000，已分配 $3,400，剩余额度 $1,600，未超总预算。</div>
+              </div>
+              <div class="card">
+                <h4>Agent 全托管策略白盒</h4>
+                <table>
+                  <tr><th>判断项</th><th>当前结论</th><th>动作</th></tr>
+                  <tr><td>边际 ROAS</td><td>Meta 3.5 > TikTok 2.4</td><td class="score">Meta 加权</td></tr>
+                  <tr><td>线索质量</td><td>Meta 高意向率 38%</td><td class="score">预算倾斜</td></tr>
+                  <tr><td>人群表现</td><td>TikTok 冷启动点击高但成交弱</td><td class="risk">缩小泛人群</td></tr>
+                  <tr><td>库存约束</td><td>库存安全但接近降速线</td><td>禁止激进扩量</td></tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:16px">
+              <h4>Loop 动作流</h4>
+              <div class="timeline">
+                <div class="tl"><time>21:42</time><div><b>观察</b><p>直播间进入高峰，TikTok CTR 上升但停留和加购偏弱。</p></div></div>
+                <div class="tl"><time>21:43</time><div><b>诊断</b><p>Analysis 判定 TikTok 泛人群效率下降，Signal 输出 Meta 高意向线索增加。</p></div></div>
+                <div class="tl"><time>21:44</time><div><b>动作</b><p>Delivery 执行：$600 从 TikTok 转至 Meta，同时收窄 TikTok 泛人群、扩大 Meta 再营销。</p></div></div>
+                <div class="tl"><time>21:54</time><div><b>验证</b><p>观察窗口结束，Meta 增量毛利 +$210，动作保留并写入策略记忆。</p></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page" id="revenue">
+            <div class="card">
+              <h2>投放收益效果</h2>
+              <div class="hint">用户说「帮我调出直播间 A 的整体投放收益」后，展示收益指标、对照基线和 Agent 调整贡献。</div>
+              <div class="grid g4" style="margin-top:16px">
+                <div class="metric"><label>总成交 GMV</label><strong>$6,540</strong><small>较固定预算 +$1,020</small></div>
+                <div class="metric"><label>毛利润</label><strong>$3,597</strong><small>增量毛利 +$617</small></div>
+                <div class="metric"><label>整体 ROAS</label><strong>3.10</strong><small>目标达成 103%</small></div>
+                <div class="metric"><label>预算浪费减少</label><strong>$430</strong><small>低效人群止损</small></div>
+              </div>
+            </div>
+            <div class="grid g2" style="margin-top:16px">
+              <div class="card">
+                <h4>直播间 / 渠道收益拆解</h4>
+                <table>
+                  <tr><th>对象</th><th>消耗</th><th>收入</th><th>ROAS</th><th>结论</th></tr>
+                  <tr><td>TikTok</td><td>$1,780</td><td>$4,160</td><td>2.34</td><td class="risk">拉量强，成交弱</td></tr>
+                  <tr><td>Meta</td><td>$1,620</td><td>$5,620</td><td>3.47</td><td class="score">高意向承接强</td></tr>
+                  <tr><td>固定预算基线</td><td>$3,400</td><td>$8,840</td><td>2.60</td><td>对照组</td></tr>
+                  <tr><td>Agent 托管</td><td>$3,400</td><td>$10,540</td><td>3.10</td><td class="score">+19% ROAS</td></tr>
+                </table>
+              </div>
+              <div class="card">
+                <h4>Agent 经验沉淀</h4>
+                <ul class="ul">
+                  <li>直播前 30 分钟 TikTok 更适合放大曝光和冷启动人群。</li>
+                  <li>进入转化高峰后，Meta 再营销与相似人群的毛利贡献更高。</li>
+                  <li>高意向评论率连续 2 个窗口领先时，可作为加码 Meta 的强信号。</li>
+                  <li>库存低于 600 件时，自动停止进取型扩量，只保留高 ROAS 人群。</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card" style="margin-top:16px">
+              <h4>关键动作贡献</h4>
+              <table>
+                <tr><th>时间</th><th>动作</th><th>依据</th><th>验证结果</th><th>沉淀</th></tr>
+                <tr><td>21:44</td><td>$600 TikTok → Meta</td><td>质量分 82 vs 61</td><td class="score">+$210 毛利</td><td>可复用</td></tr>
+                <tr><td>22:10</td><td>扩大 Meta 再营销</td><td>加购未付提升</td><td class="score">+$180 毛利</td><td>可复用</td></tr>
+                <tr><td>22:35</td><td>暂停 TikTok 低效素材</td><td>3 窗口 CPA 偏高</td><td class="score">浪费 -$95</td><td>素材黑名单</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="page" id="leads">
+            <div class="card">
+              <h2>线索留资与跟进转化</h2>
+              <div class="hint">用户说「帮我看直播间线索情况」后，展示留言、模型识别、有意向、跟进转化，以及不同渠道线索画像。</div>
+              <div class="grid g4" style="margin-top:16px">
+                <div class="metric"><label>直播间留言</label><strong>1,248</strong><small>Meta + TikTok 合计</small></div>
+                <div class="metric"><label>模型识别线索</label><strong>326</strong><small>置信度 ≥ 0.65</small></div>
+                <div class="metric"><label>高意向线索</label><strong>148</strong><small>意向率 45.4%</small></div>
+                <div class="metric"><label>跟进转化</label><strong>27</strong><small>转化率 18.2%</small></div>
+              </div>
+            </div>
+            <div class="grid g2" style="margin-top:16px">
+              <div class="card">
+                <h4>线索漏斗</h4>
+                <div class="barbox"><div class="barrow"><span>留言/互动</span><b>1,248</b></div><div class="bar"><div class="fill" style="width:100%"></div></div></div>
+                <div class="barbox"><div class="barrow"><span>模型识别线索</span><b>326</b></div><div class="bar"><div class="fill" style="width:62%;background:linear-gradient(90deg,#60a5fa,#8b5cf6)"></div></div></div>
+                <div class="barbox"><div class="barrow"><span>高意向</span><b>148</b></div><div class="bar"><div class="fill" style="width:42%;background:linear-gradient(90deg,#8b5cf6,#ec4899)"></div></div></div>
+                <div class="barbox"><div class="barrow"><span>跟进转化</span><b>27</b></div><div class="bar"><div class="fill" style="width:18%;background:linear-gradient(90deg,#10b981,#35d07f)"></div></div></div>
+              </div>
+              <div class="card">
+                <h4>分渠道线索画像</h4>
+                <table>
+                  <tr><th>渠道</th><th>线索质量</th><th>特点</th><th>建议</th></tr>
+                  <tr><td>Meta</td><td class="score">82</td><td>加购未付、价格咨询、复购意向高</td><td class="score">扩大再营销</td></tr>
+                  <tr><td>TikTok</td><td class="risk">61</td><td>互动量高，低意向评论多，冲动型</td><td>收窄人群</td></tr>
+                  <tr><td>自然流量</td><td>70</td><td>口碑问询、产品规格问题多</td><td>客服优先回复</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="card" style="margin-top:16px">
+              <h4>高意向线索列表</h4>
+              <table>
+                <tr><th>用户</th><th>渠道</th><th>最近留言</th><th>意向分</th><th>跟进状态</th><th>反馈到投放</th></tr>
+                <tr><td>@jenny_w</td><td>Meta</td><td>哪里买？今晚有优惠吗</td><td class="score">92</td><td>待回复</td><td>Meta 质量分 +3</td></tr>
+                <tr><td>@mike2024</td><td>Meta</td><td>已加购，想确认配送时间</td><td class="score">88</td><td>跟进中</td><td>再营销人群 +1</td></tr>
+                <tr><td>@sara.lee</td><td>TikTok</td><td>可以打冰块吗</td><td>64</td><td>已回复</td><td>素材卖点建议</td></tr>
+                <tr><td>@tomh</td><td>TikTok</td><td>看起来不错</td><td class="risk">41</td><td>观察</td><td>不触发调仓</td></tr>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="chat">
+        <div class="chatHead">
+          <div><b>Agent 对话</b><div class="small">Orchestrator 主 Agent</div></div>
+          <span class="collapse">›</span>
+        </div>
+        <div class="chatBody">
+          <div class="msg ai">我会把每个会话绑定到一笔预算项目，并根据你的指令调出对应画布。</div>
+          <div class="msg user">这次预算 $5,000，给便携榨汁杯，美国市场，ROAS 不能低于 3.0。</div>
+          <div class="msg ai">已提炼：预算、渠道、商品、直播间、收益目标、时间和红线约束。正在把任务分配给 Planning Agent 生成三套托管方案。</div>
+          <div class="msg user">帮我预算更偏向稳一点，但不要牺牲太多增长。</div>
+          <div class="msg ai">建议选择「直播间 B · 品牌自播」均衡方案：冷启动 TikTok / Meta 各 $1,050，后续根据边际 ROAS 与线索质量动态调仓。</div>
+          <div class="msg user">确认上线。</div>
+          <div class="msg ai">已分配给 Delivery Agent：正在创建 TikTok 与 Meta 投放计划、配置预算、设置人群与护栏。上线状态会在这里回报。</div>
+          <div class="msg user">帮我调出直播间 TikTok 托管后台。</div>
+          <div class="msg ai">已切换到直播托管控制后台。你可以查看实时消耗、ROAS、人群表现，以及 Agent 每次调控的白盒依据。</div>
+        </div>
+        <div class="chatInput"><div class="input">输入：帮我调出直播间 A 的收益 / 线索 / 托管后台...</div></div>
+      </aside>
+    </div>
+  </div>
+  <script>
+    const tabs=[...document.querySelectorAll('.tab')];
+    const pages=[...document.querySelectorAll('.page')];
+    tabs.forEach(t=>t.addEventListener('click',()=>{
+      tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');
+      pages.forEach(p=>p.classList.remove('active'));
+      document.getElementById(t.dataset.page).classList.add('active');
+    }));
+  </script>
+</body>
+</html>

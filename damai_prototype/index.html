@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大麦助手 DaMai Assistant · 工作台原型 v1.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root { --bg:#0b0f17; }
+    body { background:#0b0f17; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb { background:#2a3344; border-radius:8px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    .glass { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); }
+    .glass-2 { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); }
+    .tab-active { background:linear-gradient(135deg,#6d28d9,#4f46e5); color:#fff; }
+    .pulse-dot { animation: pulse 1.6s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .fade { animation: fade .35s ease; }
+    @keyframes fade { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+    .bar { transition: width .6s cubic-bezier(.4,0,.2,1); }
+  </style>
+</head>
+<body class="text-slate-200">
+
+<!-- ===================== 顶栏 ===================== -->
+<header class="h-14 flex items-center justify-between px-5 border-b border-white/10 bg-[#0d1320]">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center font-bold text-white">麦</div>
+    <div>
+      <div class="text-sm font-semibold text-white leading-none">大麦助手 <span class="text-slate-400 font-normal">DaMai Assistant</span></div>
+      <div class="text-[11px] text-slate-500 mt-0.5">L4 多渠道预算全托管 · 比赛版（确定性回放沙箱）</div>
+    </div>
+  </div>
+  <nav class="flex items-center gap-1 bg-white/5 p-1 rounded-xl text-sm">
+    <button onclick="showPage('plan',this)" class="tab-active px-4 py-1.5 rounded-lg font-medium transition">方案规划</button>
+    <button onclick="showPage('live',this)" class="px-4 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">直播托管</button>
+    <button onclick="showPage('leads',this)" class="px-4 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">线索中心</button>
+    <button onclick="showPage('review',this)" class="px-4 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">复盘迭代</button>
+  </nav>
+  <div class="flex items-center gap-4 text-xs">
+    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span><span class="text-slate-400">直播中 · 02:14:30</span></div>
+    <div class="text-right">
+      <div class="text-slate-500 text-[10px]">总预算 / 已消耗</div>
+      <div class="text-white font-semibold">$5,000 <span class="text-slate-500">/</span> <span class="text-amber-400">$2,180</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== 三栏主体 ===================== -->
+<div class="flex" style="height:calc(100vh - 3.5rem)">
+
+  <!-- 左栏：Orchestrator 对话 -->
+  <aside class="w-[300px] shrink-0 border-r border-white/10 bg-[#0d1320] flex flex-col">
+    <div class="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+      <i data-lucide="bot" class="w-4 h-4 text-violet-400"></i>
+      <span class="text-sm font-semibold text-white">Orchestrator</span>
+      <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300">编排中</span>
+    </div>
+    <div class="flex-1 overflow-y-auto p-3 space-y-3 text-[13px]">
+      <div class="glass rounded-xl p-3">
+        <div class="text-[10px] text-slate-500 mb-1">商家</div>
+        我要给「便携榨汁杯」做一场美国市场直播，预算 5000 刀，目标 ROAS 3.0。
+      </div>
+      <div class="glass-2 rounded-xl p-3 border-l-2 border-violet-500">
+        <div class="text-[10px] text-violet-300 mb-1 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i>Orchestrator</div>
+        收到。还差三项关键信息：当前<b>库存量</b>、商品<b>毛利率</b>、<b>直播时间窗</b>。补齐后我让 Planning 出三套方案。
+      </div>
+      <div class="glass rounded-xl p-3">
+        <div class="text-[10px] text-slate-500 mb-1">商家</div>
+        库存 1200 件，毛利率 55%，今晚 8 点到 11 点。
+      </div>
+      <div class="glass-2 rounded-xl p-3 border-l-2 border-violet-500">
+        <div class="text-[10px] text-violet-300 mb-1 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i>Orchestrator</div>
+        信息完整 ✅ 已派发任务给 <b>Planning Agent</b>，正在生成保守 / 均衡 / 进取三套方案……
+      </div>
+      <div class="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i> 三套方案已生成，请在右侧画布查看
+      </div>
+    </div>
+    <div class="p-3 border-t border-white/10">
+      <div class="glass rounded-xl flex items-center px-3 py-2">
+        <input placeholder="向 Orchestrator 提问 / 下达指令…" class="bg-transparent text-sm flex-1 outline-none placeholder:text-slate-600" />
+        <i data-lucide="send" class="w-4 h-4 text-violet-400"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中央：执行画布 -->
+  <main id="canvas" class="flex-1 overflow-y-auto p-6"></main>
+
+  <!-- 右栏：Agent 状态与证据面板 -->
+  <aside class="w-[340px] shrink-0 border-l border-white/10 bg-[#0d1320] overflow-y-auto" id="rightPanel"></aside>
+
+</div>
+
+<script>
+/* ========================================================= 中央画布内容 ========================================================= */
+const PAGES = {
+/* ---------------- 方案规划 ---------------- */
+plan: `
+<div class="fade max-w-4xl mx-auto space-y-5">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-white">方案规划</h1>
+    <span class="text-xs text-slate-500">Planning Agent 输出 · 3 套方案</span>
+  </div>
+
+  <!-- 经营目标摘要 -->
+  <div class="glass rounded-2xl p-4">
+    <div class="text-xs text-slate-400 mb-3 flex items-center gap-2"><i data-lucide="target" class="w-4 h-4 text-violet-400"></i>经营目标（已采集）</div>
+    <div class="grid grid-cols-4 gap-3 text-sm">
+      ${kv('商品','便携榨汁杯')}${kv('市场','美国 / USD')}${kv('总预算','$5,000')}${kv('直播时间','20:00–23:00')}
+      ${kv('库存','1,200 件')}${kv('毛利率','55%')}${kv('目标 ROAS','3.0')}${kv('渠道','TikTok + Meta')}
+    </div>
+  </div>
+
+  <!-- 三案对比 -->
+  <div class="grid grid-cols-3 gap-4">
+    ${planCard('保守','steady',['TikTok 70% / Meta 30%','节奏：匀速投放','预期 ROAS 2.8–3.2','回撤风险低，增长慢'],false)}
+    ${planCard('均衡','balanced',['TikTok 50% / Meta 50%','节奏：前段试探后段加码','预期 ROAS 3.0–3.6','风险中等，推荐'],true)}
+    ${planCard('进取','aggressive',['TikTok 40% / Meta 60%','节奏：高峰激进抢量','预期 ROAS 3.2–4.2','波动大，可能超 CPA'],false)}
+  </div>
+
+  <!-- 护栏配置 -->
+  <div class="glass rounded-2xl p-5">
+    <div class="text-sm font-semibold text-white mb-4 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>预算托管护栏</div>
+    <div class="grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
+      <div>
+        <div class="flex justify-between mb-1"><span class="text-slate-400">单次自动调仓上限</span><span class="text-white font-medium">15%</span></div>
+        <input type="range" value="15" min="5" max="30" class="w-full accent-violet-500">
+      </div>
+      <div>
+        <div class="flex justify-between mb-1"><span class="text-slate-400">单次审批金额阈值</span><span class="text-white font-medium">$800</span></div>
+        <input type="range" value="800" min="200" max="2000" class="w-full accent-violet-500">
+      </div>
+      <div class="col-span-2 flex flex-wrap gap-2">
+        <span class="text-slate-400 mr-1">禁用动作：</span>
+        ${chip('价格承诺',true)}${chip('退款处理',true)}${chip('新开渠道',true)}${chip('修改目标ROAS',false)}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3">
+    <button class="px-4 py-2 rounded-xl glass-2 text-sm text-slate-300 hover:text-white">调整护栏</button>
+    <button class="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 text-white text-sm font-medium flex items-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>批准并启动托管</button>
+  </div>
+</div>`,
+
+/* ---------------- 直播托管 ---------------- */
+live: `
+<div class="fade max-w-5xl mx-auto space-y-5">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-white">直播托管控制台</h1>
+    <div class="flex gap-2">
+      <button class="px-3 py-1.5 rounded-lg glass-2 text-xs text-amber-300 flex items-center gap-1"><i data-lucide="pause" class="w-3.5 h-3.5"></i>暂停托管</button>
+      <button class="px-3 py-1.5 rounded-lg glass-2 text-xs text-slate-300 flex items-center gap-1"><i data-lucide="hand" class="w-3.5 h-3.5"></i>人工接管</button>
+    </div>
+  </div>
+
+  <!-- 经营指标 -->
+  <div class="grid grid-cols-5 gap-3">
+    ${metric('收入','$6,540','+12%','up')}${metric('毛利润','$3,597','+9%','up')}${metric('实时 ROAS','3.0','达标','flat')}${metric('CPA','$8.2','-5%','up')}${metric('库存','740 件','安全','flat')}
+  </div>
+
+  <!-- 预算轨道 -->
+  <div class="glass rounded-2xl p-5">
+    <div class="text-sm font-semibold text-white mb-4 flex items-center gap-2"><i data-lucide="wallet" class="w-4 h-4 text-violet-400"></i>统一预算池（账本守恒 · 不超总预算）</div>
+    ${budgetBar('TikTok Ads','#22d3ee',1180,1700)}
+    ${budgetBar('Meta Ads','#a78bfa',1000,1700)}
+    <div class="flex justify-between text-xs text-slate-400 mt-3 pt-3 border-t border-white/10">
+      <span>已分配 $3,400 · 已消耗 $2,180 · 余额 <b class="text-emerald-400">$2,820</b></span>
+      <span>总预算 $5,000</span>
+    </div>
+  </div>
+
+  <!-- 事件时间线 + 动作证据 -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="glass rounded-2xl p-5">
+      <div class="text-sm font-semibold text-white mb-3 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>事件时间线</div>
+      <div class="space-y-3 text-xs">
+        ${timeline('21:42','Signal','Meta 高意向评论占比升至 38%','cyan')}
+        ${timeline('21:43','Analysis','TikTok 边际 ROAS 跌破 2.4，Meta 维持 3.5','amber')}
+        ${timeline('21:44','Delivery','提议：$600 TikTok → Meta（< 15% 上限，自动授权）','violet')}
+        ${timeline('21:54','Analysis','观察窗结束：Meta 增量毛利 +$210，保留动作','emerald')}
+      </div>
+    </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="text-sm font-semibold text-white mb-3 flex items-center gap-2"><i data-lucide="file-check-2" class="w-4 h-4 text-emerald-400"></i>动作证据卡 #A-1042</div>
+      <div class="space-y-2.5 text-xs">
+        ${ev('触发信号','Meta 高意向率↑ + TikTok 边际 ROAS↓')}
+        ${ev('判断依据','渠道质量分 Meta 82 > TikTok 61')}
+        ${ev('执行参数','转移 $600，TikTok 1180→880，Meta 1000→1600')}
+        ${ev('观察窗口','10 分钟（21:44–21:54）')}
+        ${ev('验证结果','✅ 增量毛利 +$210，保留并写入记忆')}
+      </div>
+    </div>
+  </div>
+</div>`,
+
+/* ---------------- 线索中心 ---------------- */
+leads: `
+<div class="fade max-w-5xl mx-auto space-y-5">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-white">线索中心</h1>
+    <span class="text-xs text-slate-500">Signal Agent · 实时建档 · 不直接触发大额调仓</span>
+  </div>
+
+  <div class="grid grid-cols-4 gap-3">
+    ${metric('有效线索','148','+22','up')}${metric('意向率','31%','+4%','up')}${metric('有效线索成本','$3.1','-8%','up')}${metric('线索成交率','18%','达标','flat')}
+  </div>
+
+  <div class="glass rounded-2xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-white/10 text-sm font-semibold text-white flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>线索档案</div>
+    <table class="w-full text-xs">
+      <thead class="text-slate-500 bg-white/5">
+        <tr><th class="text-left px-5 py-2">用户</th><th class="text-left py-2">来源渠道</th><th class="text-left py-2">意向分</th><th class="text-left py-2">最近互动</th><th class="text-left py-2">跟进状态</th><th class="text-right px-5 py-2">操作</th></tr>
+      </thead>
+      <tbody>
+        ${lead('@jenny_w','Meta',92,'评论：哪里买？','待回复')}
+        ${lead('@mike2024','Meta',88,'加购未付','跟进中')}
+        ${lead('@sara.lee','TikTok',64,'咨询尺寸','已回复')}
+        ${lead('@tomh','TikTok',41,'点赞','观察')}
+      </tbody>
+    </table>
+  </div>
+</div>`,
+
+/* ---------------- 复盘迭代 ---------------- */
+review: `
+<div class="fade max-w-5xl mx-auto space-y-5">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-white">复盘迭代</h1>
+    <div class="flex gap-2">
+      <button class="px-3 py-1.5 rounded-lg glass-2 text-xs text-slate-300 flex items-center gap-1"><i data-lucide="file-down" class="w-3.5 h-3.5"></i>导出复盘</button>
+      <button class="px-3 py-1.5 rounded-lg glass-2 text-xs text-slate-300 flex items-center gap-1"><i data-lucide="scroll-text" class="w-3.5 h-3.5"></i>查看审计</button>
+    </div>
+  </div>
+
+  <!-- 基线对比 -->
+  <div class="glass rounded-2xl p-5">
+    <div class="text-sm font-semibold text-white mb-4 flex items-center gap-2"><i data-lucide="git-compare" class="w-4 h-4 text-violet-400"></i>相对固定预算基线的增量</div>
+    <div class="grid grid-cols-3 gap-4">
+      ${compareCard('固定预算基线','ROAS 2.6','毛利 $2,980','灰度参照',false)}
+      ${compareCard('大麦托管（实际）','ROAS 3.1','毛利 $3,597','+$617 增量毛利',true)}
+      ${compareCard('增量贡献','+19% ROAS','+20.7% 毛利','3 次自主调仓',false)}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div class="glass rounded-2xl p-5">
+      <div class="text-sm font-semibold text-white mb-3 flex items-center gap-2"><i data-lucide="list-checks" class="w-4 h-4 text-emerald-400"></i>关键动作回顾</div>
+      <div class="space-y-2 text-xs">
+        ${reviewAct('21:44','$600 TikTok→Meta','+$210','自动')}
+        ${reviewAct('22:10','Meta 加码 $400','+$180','自动')}
+        ${reviewAct('22:35','TikTok 暂停低效素材','+$95','自动')}
+        ${reviewAct('22:50','追加预算 $900','人工批准','审批')}
+      </div>
+    </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="text-sm font-semibold text-white mb-3 flex items-center gap-2"><i data-lucide="brain" class="w-4 h-4 text-cyan-400"></i>策略学习（写入记忆）</div>
+      <ul class="space-y-2 text-xs text-slate-300 list-disc pl-4">
+        <li>该品类高峰期 Meta 高意向率显著优于 TikTok，建议默认 Meta 偏配。</li>
+        <li>TikTok 适合前段拉量蓄水，后段及时止损。</li>
+        <li>10 分钟观察窗对本场调仓验证有效，可沿用。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="flex justify-end">
+    <button class="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 text-white text-sm font-medium flex items-center gap-2"><i data-lucide="wand-2" class="w-4 h-4"></i>基于本场生成下一场草案</button>
+  </div>
+</div>`
+};
+
+/* ========================================================= 右栏内容 ========================================================= */
+const RIGHT = {
+plan: rightAgents('待启动') + `
+  <div class="p-4">
+    <div class="text-xs font-semibold text-slate-400 mb-2">关键假设</div>
+    <div class="glass rounded-xl p-3 text-xs text-slate-300 space-y-1.5">
+      <div>· 高峰流量集中在 21:00–22:00</div>
+      <div>· Meta 转化窗口约 30 分钟，需延迟归因</div>
+      <div>· 库存 1200 件足以支撑进取方案</div>
+    </div>
+  </div>`,
+
+live: rightAgents('运行中') + `
+  <div class="p-4 space-y-3">
+    <div class="text-xs font-semibold text-slate-400">审批中心</div>
+    <div class="rounded-xl p-3 bg-amber-500/10 border border-amber-500/30">
+      <div class="flex items-center gap-2 text-amber-300 text-xs font-medium mb-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i>高风险动作待审批</div>
+      <div class="text-xs text-slate-300 mb-1">追加总预算 +$900（超 $800 阈值）</div>
+      <div class="text-[11px] text-slate-500 mb-3">依据：高峰转化率 +24%，库存充足，预计增量毛利 +$300</div>
+      <div class="flex gap-2">
+        <button class="flex-1 py-1.5 rounded-lg bg-emerald-500/80 text-white text-xs">批准</button>
+        <button class="flex-1 py-1.5 rounded-lg glass-2 text-slate-300 text-xs">拒绝</button>
+      </div>
+    </div>
+    <div class="rounded-xl p-3 glass">
+      <div class="text-xs text-slate-400 mb-1">自动回滚守护</div>
+      <div class="text-[11px] text-slate-500">效果恶化超阈值 / 数据断流时，自动暂停并通知人工</div>
+    </div>
+  </div>`,
+
+leads: rightAgents('运行中') + `
+  <div class="p-4 space-y-3">
+    <div class="text-xs font-semibold text-slate-400">渠道质量分</div>
+    ${qualityScore('Meta',82,'#a78bfa')}
+    ${qualityScore('TikTok',61,'#22d3ee')}
+    <div class="glass rounded-xl p-3 text-[11px] text-slate-400 leading-relaxed">
+      质量分 = 短期投放效率 + 线索质量 + 利润贡献 + 数据可信度（透明权重，可调）。Signal 聚合后输出给 Analysis，影响预算判断。
+    </div>
+  </div>`,
+
+review: rightAgents('已结束') + `
+  <div class="p-4 space-y-3">
+    <div class="text-xs font-semibold text-slate-400">Agent 质量指标</div>
+    ${qkv('自主动作成功率','92%')}
+    ${qkv('审批通过率','100%')}
+    ${qkv('回滚率','8%')}
+    ${qkv('异常→调整时长','1.4 分钟')}
+    ${qkv('证据完整率','100%')}
+  </div>`
+};
+
+/* ========================================================= 组件函数 ========================================================= */
+function kv(k,v){return `<div class="glass rounded-lg p-2.5"><div class="text-[10px] text-slate-500">${k}</div><div class="text-white font-medium mt-0.5">${v}</div></div>`}
+function chip(t,on){return `<span class="px-2.5 py-1 rounded-lg text-xs ${on?'bg-rose-500/20 text-rose-300 border border-rose-500/30':'glass-2 text-slate-400'}">${on?'⛔ ':''}${t}</span>`}
+function planCard(name,key,lines,rec){
+  return `<div class="rounded-2xl p-4 ${rec?'bg-gradient-to-b from-violet-600/20 to-transparent border border-violet-500/50':'glass'} relative">
+    ${rec?'<span class="absolute -top-2 right-3 text-[10px] px-2 py-0.5 rounded-full bg-violet-500 text-white">推荐</span>':''}
+    <div class="text-white font-semibold mb-3">${name}</div>
+    <div class="space-y-1.5 text-xs text-slate-300">${lines.map(l=>`<div class="flex gap-1.5"><span class="text-violet-400">·</span>${l}</div>`).join('')}</div>
+    <button class="mt-4 w-full py-1.5 rounded-lg text-xs ${rec?'bg-violet-500 text-white':'glass-2 text-slate-300'}">选择${name}</button>
+  </div>`}
+function metric(label,val,delta,dir){
+  const c = dir==='up'?'text-emerald-400':dir==='down'?'text-rose-400':'text-slate-400';
+  return `<div class="glass rounded-xl p-3"><div class="text-[11px] text-slate-500">${label}</div><div class="text-lg font-semibold text-white mt-0.5">${val}</div><div class="text-[11px] ${c} mt-0.5">${delta}</div></div>`}
+function budgetBar(name,color,spent,total){
+  const pct=Math.round(spent/total*100);
+  return `<div class="mb-4"><div class="flex justify-between text-xs mb-1.5"><span class="text-slate-300">${name}</span><span class="text-slate-400">$${spent} / $${total}</span></div>
+  <div class="h-2.5 rounded-full bg-white/10 overflow-hidden"><div class="bar h-full rounded-full" style="width:${pct}%;background:${color}"></div></div></div>`}
+function timeline(t,agent,txt,c){
+  const map={cyan:'text-cyan-400 bg-cyan-400',amber:'text-amber-400 bg-amber-400',violet:'text-violet-400 bg-violet-400',emerald:'text-emerald-400 bg-emerald-400'};
+  return `<div class="flex gap-3"><div class="flex flex-col items-center"><span class="w-2 h-2 rounded-full ${map[c].split(' ')[1]} mt-1"></span><span class="flex-1 w-px bg-white/10"></span></div>
+  <div class="pb-1"><div class="flex items-center gap-2"><span class="text-slate-500">${t}</span><span class="${map[c].split(' ')[0]} font-medium">${agent}</span></div><div class="text-slate-300 mt-0.5">${txt}</div></div></div>`}
+function ev(k,v){return `<div class="flex gap-2"><span class="text-slate-500 w-16 shrink-0">${k}</span><span class="text-slate-200">${v}</span></div>`}
+function lead(u,ch,score,act,status){
+  const sc = score>=80?'text-emerald-400':score>=60?'text-amber-400':'text-slate-400';
+  const chc = ch==='Meta'?'text-violet-300':'text-cyan-300';
+  return `<tr class="border-t border-white/5 hover:bg-white/5">
+    <td class="px-5 py-2.5 text-white">${u}</td><td class="${chc}">${ch}</td>
+    <td class="${sc} font-semibold">${score}</td><td class="text-slate-400">${act}</td>
+    <td><span class="px-2 py-0.5 rounded-full glass-2 text-slate-300">${status}</span></td>
+    <td class="px-5 text-right"><span class="text-violet-400 cursor-pointer hover:underline">回复</span> · <span class="text-slate-400 cursor-pointer hover:underline">转人工</span></td></tr>`}
+function compareCard(title,a,b,c,hl){
+  return `<div class="rounded-xl p-4 ${hl?'bg-gradient-to-b from-emerald-600/20 to-transparent border border-emerald-500/40':'glass'}">
+    <div class="text-xs text-slate-400 mb-2">${title}</div>
+    <div class="text-white font-semibold">${a}</div><div class="text-sm text-slate-300 mt-1">${b}</div>
+    <div class="text-xs ${hl?'text-emerald-400':'text-slate-500'} mt-2">${c}</div></div>`}
+function reviewAct(t,txt,res,type){
+  const c = type==='审批'?'text-amber-300':'text-emerald-300';
+  return `<div class="flex items-center gap-3 glass rounded-lg p-2.5"><span class="text-slate-500">${t}</span><span class="text-slate-200 flex-1">${txt}</span><span class="${c} font-medium">${res}</span></div>`}
+function rightAgents(state){
+  const agents=[['Orchestrator','编排','violet'],['Planning','规划','indigo'],['Delivery','执行','cyan'],['Analysis','分析','amber'],['Signal','信号','emerald']];
+  return `<div class="p-4 border-b border-white/10">
+    <div class="flex items-center justify-between mb-3"><span class="text-sm font-semibold text-white">Agent 状态</span><span class="text-[10px] text-slate-500">${state}</span></div>
+    <div class="space-y-2">${agents.map(a=>`<div class="flex items-center gap-2 text-xs"><span class="w-1.5 h-1.5 rounded-full bg-${a[2]}-400 pulse-dot"></span><span class="text-slate-200">${a[0]}</span><span class="text-slate-500">${a[1]}</span><span class="ml-auto text-[10px] text-slate-600">共享状态</span></div>`).join('')}</div>
+  </div>`}
+function qualityScore(name,score,color){
+  return `<div class="glass rounded-xl p-3"><div class="flex justify-between text-xs mb-1.5"><span class="text-slate-300">${name}</span><span class="font-semibold" style="color:${color}">${score}</span></div>
+  <div class="h-2 rounded-full bg-white/10 overflow-hidden"><div class="bar h-full rounded-full" style="width:${score}%;background:${color}"></div></div></div>`}
+function qkv(k,v){return `<div class="flex justify-between glass rounded-lg p-2.5 text-xs"><span class="text-slate-400">${k}</span><span class="text-white font-medium">${v}</span></div>`}
+
+/* ========================================================= 页面切换 ========================================================= */
+function showPage(p,btn){
+  document.getElementById('canvas').innerHTML = PAGES[p];
+  document.getElementById('rightPanel').innerHTML = RIGHT[p];
+  document.querySelectorAll('nav button').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-slate-300');});
+  if(btn){btn.classList.add('tab-active');btn.classList.remove('text-slate-300');}
+  if(window.lucide) lucide.createIcons();
+}
+showPage('plan', document.querySelector('nav button'));
+lucide.createIcons();
+</script>
+</body>
+</html>
